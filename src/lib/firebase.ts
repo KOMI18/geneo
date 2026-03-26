@@ -4,15 +4,23 @@ import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDXWAE0QC9h1_bz1MVbOfGyBy2HpP8_ceQ",
+
+  apiKey: "AIzaSyCj-MU_kpRc2sVlIjqphT36VlMcEshr6ws",
+
   authDomain: "covoituragebbc.firebaseapp.com",
+
   projectId: "covoituragebbc",
+
   storageBucket: "covoituragebbc.firebasestorage.app",
+
   messagingSenderId: "813461008345",
-  appId: "1:813461008345:web:5ca1209af487a6f08e33c8",
-  measurementId: "G-W2H6YXY5ZP"
+
+  appId: "1:813461008345:web:c161e6851bcb4c398e33c8",
+
+  measurementId: "G-QS95L713L1"
 
 };
+
 
 
 // Singleton pour éviter de réinitialiser l'app à chaque rechargement Next.js

@@ -1,0 +1,142 @@
+'use client';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { clearSessionCookie } from '@/lib/session';
+import { useDashboard } from '@/hooks/useDashboard';
+import { useAuth } from '@/hooks/useAuth';
+import { Plus, TreePine, LogOut } from 'lucide-react';
+
+function timeAgo(ts: number) {
+  const diff = Date.now() - ts;
+  const h = Math.floor(diff / 3600000);
+  if (h < 1) return "À l'instant";
+  if (h < 24) return `Il y a ${h}h`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'Hier';
+  return `Il y a ${d}j`;
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { trees, loading, totalMembers } = useDashboard();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    clearSessionCookie();
+    router.push('/login');
+  };
+
+  const handleCreateTree = async () => {
+    if (!user) return;
+    const name = prompt('Nom de votre arbre généalogique :');
+    if (!name?.trim()) return;
+
+    const docRef = await addDoc(collection(db, 'trees'), {
+      name,
+      ownerId: user.uid,
+      memberCount: 0,
+      createdAt: serverTimestamp(),
+      updatedAt: Date.now(),
+    });
+
+    router.push(`/tree/${docRef.id}`);
+  };
+
+  // Initiales depuis displayName
+  const initials = user?.displayName
+    ?.split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) ?? '?';
+
+  const lastName = trees.length > 0
+    ? timeAgo(Math.max(...trees.map(t => t.updatedAt)))
+    : '—';
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <p className="text-zinc-400 animate-pulse">Chargement...</p>
+      </div>
+    );
+  }
+
+  return (
+    <main className="max-w-3xl mx-auto px-6 py-10">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-sm text-zinc-500">Bonjour,</p>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+            {user?.displayName ?? 'Utilisateur'}
+          </h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold">
+            {initials}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <LogOut size={14} />
+            Déconnexion
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {[
+          { label: 'Arbres', value: trees.length },
+          { label: 'Membres total', value: totalMembers },
+          { label: 'Dernière modif.', value: lastName },
+        ].map((s) => (
+          <div key={s.label} className="bg-zinc-100 dark:bg-zinc-900 rounded-xl p-4">
+            <p className="text-xs text-zinc-500 mb-1">{s.label}</p>
+            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Arbres */}
+      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">
+        Mes arbres
+      </p>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {trees.map((tree) => (
+          <button
+            key={tree.id}
+            onClick={() => router.push(`/tree/${tree.id}`)}
+            className="text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 flex items-center justify-center mb-3">
+              <TreePine size={20} className="text-orange-500" />
+            </div>
+            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+              {tree.name}
+            </p>
+            <p className="text-xs text-zinc-500 mt-1">{tree.memberCount} membres</p>
+            <p className="text-xs text-zinc-400 mt-2">{timeAgo(tree.updatedAt)}</p>
+          </button>
+        ))}
+
+        {/* Nouvelle carte */}
+        <button
+          onClick={handleCreateTree}
+          className="flex flex-col items-center justify-center gap-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-4 min-h-[140px] hover:border-orange-400 transition-colors"
+        >
+          <div className="w-9 h-9 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 flex items-center justify-center">
+            <Plus size={18} className="text-zinc-400" />
+          </div>
+          <p className="text-sm text-zinc-400">Nouvel arbre</p>
+        </button>
+      </div>
+    </main>
+  );
+}
