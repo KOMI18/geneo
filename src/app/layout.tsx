@@ -20,12 +20,12 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Geneo",
-    description: "Plateforme interactive de généalogie",
+    description: "Votre héritage familial prend viee",
     url: "https://geneo.vercel.app",
     siteName: "Geneo",
     images: [
       {
-        url: "/favicon.png",
+        url: "/opengraph.png",
         width: 1200,
         height: 630,
       },
