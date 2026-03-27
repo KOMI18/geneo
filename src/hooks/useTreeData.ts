@@ -110,29 +110,54 @@ export const useTreeData = (treeId: string) => {
     await updateDoc(doc(db, 'trees', treeId), { updatedAt: Date.now() });
   }, [treeId, uploadPhoto]);
 
-  // ─── Supprimer un membre ────────────────────────────────────────────────────
-  const deleteMember = useCallback(async (memberId: string) => {
-    // Supprimer la photo storage si elle existe
-    try {
-      await deleteObject(ref(storage, `trees/${treeId}/members/${memberId}/photo`));
-    } catch {
-      // pas de photo, on ignore
-    }
+  // ─── Supprimer un membre + tous ses descendants en cascade ──────────────────
+const deleteMember = useCallback(async (memberId: string) => {
 
-    // Supprimer le doc membre
-    await deleteDoc(doc(db, 'trees', treeId, 'members', memberId));
+  // 1. Trouver tous les descendants récursivement via les edges
+  const getDescendants = (id: string, visited = new Set<string>()): string[] => {
+    if (visited.has(id)) return [];
+    visited.add(id);
 
-    // Supprimer les edges liés
-    const linkedEdges = edges.filter(
-      e => e.source === memberId || e.target === memberId
-    );
-    await Promise.all(
-      linkedEdges.map(e => deleteDoc(doc(db, 'trees', treeId, 'edges', e.id)))
-    );
+    const children = edges
+      .filter(e => e.source === id && e.type === 'child')
+      .map(e => e.target);
 
-    // -1 membre et timestamp
-    await updateTreeMeta(-1);
-  }, [treeId, edges, updateTreeMeta]);
+    return [
+      id,
+      ...children.flatMap(childId => getDescendants(childId, visited))
+    ];
+  };
+
+  const allIds = getDescendants(memberId); // inclut memberId lui-même
+
+  // 2. Supprimer les photos storage de tous
+  await Promise.all(
+    allIds.map(async (id) => {
+      try {
+        await deleteObject(ref(storage, `trees/${treeId}/members/${id}/photo`));
+      } catch {
+        // pas de photo, on ignore
+      }
+    })
+  );
+
+  // 3. Supprimer tous les membres
+  await Promise.all(
+    allIds.map(id => deleteDoc(doc(db, 'trees', treeId, 'members', id)))
+  );
+
+  // 4. Supprimer tous les edges liés à ces membres
+  const linkedEdges = edges.filter(
+    e => allIds.includes(e.source) || allIds.includes(e.target)
+  );
+  await Promise.all(
+    linkedEdges.map(e => deleteDoc(doc(db, 'trees', treeId, 'edges', e.id)))
+  );
+
+  // 5. Mettre à jour memberCount
+  await updateTreeMeta(-allIds.length);
+
+}, [treeId, edges, updateTreeMeta]);
 
   return {
     members,

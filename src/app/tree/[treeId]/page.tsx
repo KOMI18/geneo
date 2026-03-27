@@ -22,7 +22,8 @@ import { useTreeStore } from '@/store/useTreeStore';
 import { useTreeData } from '@/hooks/useTreeData';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
-
+import { EditMemberModal } from '@/components/canvas/EditMemberModal';
+import { DeleteConfirmModal } from '@/components/canvas/DeleteConfirmModal';
 const nodeTypes = { familyNode: FamilyNode };
 
 export default function TreePage({ params }: { params: Promise<{ treeId: string }> }) {
@@ -59,8 +60,6 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
         id: member.id,
         gender: member.gender,
         photoURL: member.photoURL,
-        onDelete: handleDelete,
-        onEdit: handleEdit,
         onZoom: (url: string, name: string) => setZoomedImage({ url, name }),
         onAddSpouse: handleAddSpouse,
       } satisfies FamilyNodeData,
@@ -159,20 +158,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     [nodes, isSpouseMode, addMember, addDbEdge]
   );
 
-  // ─── Supprimer ─────────────────────────────────────────────────────────────
-  const handleDelete = useCallback(
-    (id: string) => deleteMember(id),
-    [deleteMember]
-  );
-
-  // ─── Éditer ────────────────────────────────────────────────────────────────
-  const handleEdit = useCallback(
-    (id: string) => {
-      const newName = prompt('Nouveau nom :');
-      if (newName) updateMember(id, { label: newName });
-    },
-    [updateMember]
-  );
+  
 
   // ─── Ajouter épouse ────────────────────────────────────────────────────────
   const handleAddSpouse = useCallback(
@@ -247,6 +233,14 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
       </Dialog>
 
       <AddMemberModal onAdd={handleAdd} isSpouseMode={isSpouseMode} />
+      <EditMemberModal onSave={async (id, updates, newPhoto) => {
+          await updateMember(id, updates, newPhoto);
+        }}
+      />
+      <DeleteConfirmModal onConfirm={async (id) => {
+          await deleteMember(id);
+        }}
+      />
     </>
   );
 }

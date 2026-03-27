@@ -10,14 +10,16 @@ export type FamilyNodeData = {
   id: string;
   gender: 'M' | 'F';
   photoURL?: string | null;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
   onZoom: (url: string, name: string) => void;
-  onAddSpouse: (id: string) => void; 
+  onAddSpouse: (id: string) => void;
 };
 // 2. On applique le type à NodeProps
 export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) => {
   const openModal = useTreeStore((state) => state.openModal);
+  const openDeleteModal = useTreeStore(s => s.openDeleteModal);
+  const openEditModal = useTreeStore(s => s.openEditModal);
+  const members = useTreeStore(s => s.members);
+  
   const genderClass = data.gender === 'M' 
     ? 'border-blue-400 dark:border-blue-500' 
     : 'border-pink-400 dark:border-pink-500';
@@ -43,8 +45,11 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
       </div>
       <div className="flex justify-between items-center mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">
         <div className="flex gap-1">
-          <button onClick={() => data.onDelete(id)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 size={14} /></button>
-          <button onClick={() => data.onEdit(id)} className="p-1 text-zinc-500 hover:bg-zinc-100 rounded"><Edit2 size={14} /></button>
+          <button onClick={() => openDeleteModal(id)} className="p-1 cursor-pointer text-red-500 hover:bg-red-50 rounded"><Trash2 size={14} /></button>
+          <button onClick={() => {
+              const member = members.find(m => m.id === id);
+              if (member) openEditModal(member);
+            }} className="p-1 text-zinc-500 cursor-pointer hover:bg-zinc-100 rounded"><Edit2 size={14} /></button>
         </div>
         
         <div className="flex gap-1">
