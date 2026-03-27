@@ -39,9 +39,9 @@ export default function TreeLayout({ children }: { children: React.ReactNode }) 
             Dashboard
           </Link>
           <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-800" />
-          <span className="italic font-bold text-zinc-900 dark:text-zinc-100">
-            Geneo <span className="text-orange-300">.io</span>
-          </span>
+           <div className="logo">
+          <img src="/logo/logo.svg" className="w-10 h-10" alt="Logo de Geneo.io" />
+        </div>
         </div>
 
         {/* Droite : user + logout */}
