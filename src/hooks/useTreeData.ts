@@ -112,31 +112,28 @@ export const useTreeData = (treeId: string) => {
 
   // ─── Supprimer un membre + tous ses descendants en cascade ──────────────────
 const deleteMember = useCallback(async (memberId: string) => {
-
-  // 1. Trouver tous les descendants récursivement via les edges
+  // 1. Trouver tous les descendants récursivement
   const getDescendants = (id: string, visited = new Set<string>()): string[] => {
     if (visited.has(id)) return [];
     visited.add(id);
-
     const children = edges
       .filter(e => e.source === id && e.type === 'child')
       .map(e => e.target);
-
-    return [
-      id,
-      ...children.flatMap(childId => getDescendants(childId, visited))
-    ];
+    return [id, ...children.flatMap(childId => getDescendants(childId, visited))];
   };
 
-  const allIds = getDescendants(memberId); // inclut memberId lui-même
+  const allIds = getDescendants(memberId);
 
-  // 2. Supprimer les photos storage de tous
+  // 2. Supprimer les photos UNIQUEMENT si le membre en a une dans Firestore
   await Promise.all(
     allIds.map(async (id) => {
-      try {
-        await deleteObject(ref(storage, `trees/${treeId}/members/${id}/photo`));
-      } catch {
-        // pas de photo, on ignore
+      const member = members.find(m => m.id === id);
+      if (member?.photoURL) {
+        try {
+          await deleteObject(ref(storage, `trees/${treeId}/members/${id}/photo`));
+        } catch {
+          // photo déjà supprimée ou inaccessible, on ignore
+        }
       }
     })
   );
@@ -146,7 +143,7 @@ const deleteMember = useCallback(async (memberId: string) => {
     allIds.map(id => deleteDoc(doc(db, 'trees', treeId, 'members', id)))
   );
 
-  // 4. Supprimer tous les edges liés à ces membres
+  // 4. Supprimer tous les edges liés
   const linkedEdges = edges.filter(
     e => allIds.includes(e.source) || allIds.includes(e.target)
   );
@@ -157,7 +154,7 @@ const deleteMember = useCallback(async (memberId: string) => {
   // 5. Mettre à jour memberCount
   await updateTreeMeta(-allIds.length);
 
-}, [treeId, edges, updateTreeMeta]);
+}, [treeId, edges, members, updateTreeMeta]);
 
   return {
     members,
