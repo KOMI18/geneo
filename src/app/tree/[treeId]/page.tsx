@@ -189,13 +189,10 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
   }
 
   return (
-    <main className="h-screen w-full overflow-hidden bg-zinc-50 dark:bg-[#080808]">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 h-14 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-10 flex items-center px-6 justify-between text-zinc-900 dark:text-zinc-100 italic font-bold">
-        Geneo <span className="text-orange-300">.io</span>
-      </div>
+    <>
+    
 
-      <div className="w-full h-full pt-14 relative">
+      <div className="w-full h-full relative">
         {/* Écran vide */}
         {nodes.length === 0 && (
           <div className="absolute inset-0 z-20 flex items-center justify-center">
@@ -250,6 +247,6 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
       </Dialog>
 
       <AddMemberModal onAdd={handleAdd} isSpouseMode={isSpouseMode} />
-    </main>
+    </>
   );
 }

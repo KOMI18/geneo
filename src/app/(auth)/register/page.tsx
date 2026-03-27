@@ -49,7 +49,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="w-full max-w-md   mx-auto  bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
+    <div className="w-full max-w-md   mx-auto  bg-white dark:bg-zinc-900 rounded-2xl  dark:border-zinc-800 p-8 ">
       {/* Logo */}
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold italic text-zinc-900 dark:text-zinc-100">
