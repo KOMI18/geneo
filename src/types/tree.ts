@@ -1,7 +1,7 @@
 // src/types/tree.ts
 
 export type Gender = 'M' | 'F';
-
+export type CollaboratorRole = 'editor' | 'viewer';
 export interface TreeMember {
   id: string;
   label: string;
@@ -25,4 +25,8 @@ export interface FamilyTree {
   name: string;
   ownerId: string;
   createdAt: number;
+  memberCount: number;
+  updatedAt: number;
+  collaborators?: Record<string, CollaboratorRole>; // email → role
+  shareLink?: string; // token unique
 }

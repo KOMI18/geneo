@@ -7,7 +7,10 @@ import { clearSessionCookie } from '@/lib/session';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useAuth } from '@/hooks/useAuth';
 import { Plus, TreePine, LogOut } from 'lucide-react';
-
+import { ShareTreeModal } from '@/components/dashboard/ShareTreeModal';
+import { Share2 } from 'lucide-react';
+import type { FamilyTree } from '@/types/tree';
+import { useState } from 'react';
 function timeAgo(ts: number) {
   const diff = Date.now() - ts;
   const h = Math.floor(diff / 3600000);
@@ -22,7 +25,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { trees, loading, totalMembers } = useDashboard();
-
+  const [sharingTree, setSharingTree] = useState<FamilyTree | null>(null);
   const handleLogout = async () => {
     await signOut(auth);
     clearSessionCookie();
@@ -110,10 +113,10 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {trees.map((tree) => (
+          <div key={tree.id} className="relative group text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors">
           <button
-            key={tree.id}
             onClick={() => router.push(`/tree/${tree.id}`)}
-            className="text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors"
+            className=""
           >
             <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 flex items-center justify-center mb-3">
               <TreePine size={20} className="text-orange-500" />
@@ -124,8 +127,21 @@ export default function DashboardPage() {
             <p className="text-xs text-zinc-500 mt-1">{tree.memberCount} membres</p>
             <p className="text-xs text-zinc-400 mt-2">{timeAgo(tree.updatedAt)}</p>
           </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setSharingTree(tree as FamilyTree); }}
+            className="absolute top-3 right-3 p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 opacity-0 group-hover:opacity-100 transition-all"
+            title="Partager"
+          >
+            <Share2 size={14} />
+          </button>
+          </div>
+          
+          
         ))}
-
+        <ShareTreeModal
+          tree={sharingTree}
+          onClose={() => setSharingTree(null)}
+        />
         {/* Nouvelle carte */}
         <button
           onClick={handleCreateTree}
@@ -136,6 +152,7 @@ export default function DashboardPage() {
           </div>
           <p className="text-sm text-zinc-400">Nouvel arbre</p>
         </button>
+
       </div>
     </main>
   );

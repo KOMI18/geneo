@@ -23,6 +23,10 @@ interface TreeStore {
   deletingMemberId: string | null;
   openDeleteModal: (id: string) => void;
   closeDeleteModal: () => void;
+  //collapse
+  collapsedIds: Set<string>;
+toggleCollapse: (id: string) => void;
+setCollapsedIds: (ids: string[]) => void;
 }
 
 export const useTreeStore = create<TreeStore>((set) => ({
@@ -49,4 +53,12 @@ export const useTreeStore = create<TreeStore>((set) => ({
   deletingMemberId: null,
   openDeleteModal: (id) => set({ deletingMemberId: id }),
   closeDeleteModal: () => set({ deletingMemberId: null }),
+  //collapse
+  collapsedIds: new Set<string>(),
+  toggleCollapse: (id) => set((state) => {
+    const next = new Set(state.collapsedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return { collapsedIds: next };
+  }),
+  setCollapsedIds: (ids) => set({ collapsedIds: new Set(ids) }),
 }));

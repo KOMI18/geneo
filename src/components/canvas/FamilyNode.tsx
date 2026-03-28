@@ -10,8 +10,10 @@ export type FamilyNodeData = {
   id: string;
   gender: 'M' | 'F';
   photoURL?: string | null;
+  canEdit: boolean;  
   onZoom: (url: string, name: string) => void;
   onAddSpouse: (id: string) => void;
+  onSaveCollapse?: (id: string) => void; 
 };
 // 2. On applique le type à NodeProps
 export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) => {
@@ -19,7 +21,14 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
   const openDeleteModal = useTreeStore(s => s.openDeleteModal);
   const openEditModal = useTreeStore(s => s.openEditModal);
   const members = useTreeStore(s => s.members);
-  
+  const collapsedIds = useTreeStore(s => s.collapsedIds);
+  const toggleCollapse = useTreeStore(s => s.toggleCollapse);
+  const edges = useTreeStore(s => s.edges);
+
+  const hasChildren = edges.some(
+  e => e.source === id && e.type === 'child'
+);
+  const isCollapsed = collapsedIds.has(id);
   const genderClass = data.gender === 'M' 
     ? 'border-blue-400 dark:border-blue-500' 
     : 'border-pink-400 dark:border-pink-500';
@@ -43,13 +52,31 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
         </div>
         <span className="text-sm font-bold dark:text-zinc-100">{data.label}</span>
       </div>
-      <div className="flex justify-between items-center mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">
+      {
+        data.canEdit && (
+                <div className="flex justify-between items-center mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">
         <div className="flex gap-1">
           <button onClick={() => openDeleteModal(id)} className="p-1 cursor-pointer text-red-500 hover:bg-red-50 rounded"><Trash2 size={14} /></button>
           <button onClick={() => {
               const member = members.find(m => m.id === id);
               if (member) openEditModal(member);
             }} className="p-1 text-zinc-500 cursor-pointer hover:bg-zinc-100 rounded"><Edit2 size={14} /></button>
+            {hasChildren && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleCollapse(id);
+                  data.onSaveCollapse?.(id); // callback vers page.tsx
+                }}
+                className={`text-[10px] px-2 py-1 rounded transition-colors ${
+                  isCollapsed
+                    ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                    : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                }`}
+              >
+                {isCollapsed ? '▶ Déplier' : '▼ Replier'}
+              </button>
+            )}
         </div>
         
         <div className="flex gap-1">
@@ -70,6 +97,9 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
           </button>
         </div>
       </div>
+        )
+      }
+
       <Handle type="source" position={Position.Right} id="right" className="opacity-0 group-hover:opacity-100 bg-pink-500" />
 
       <Handle type="source" id='bottom' position={Position.Bottom} className="w-2 h-2 bg-zinc-400" />

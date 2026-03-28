@@ -19,6 +19,7 @@ import {
   deleteObject,
 } from 'firebase/storage';
 import type { TreeMember, TreeEdge } from '@/types/tree';
+import { useTreeStore } from '@/store/useTreeStore';
 
 export const useTreeData = (treeId: string) => {
   const [members, setMembers] = useState<TreeMember[]>([]);
@@ -43,8 +44,13 @@ export const useTreeData = (treeId: string) => {
         setEdges(snap.docs.map(d => ({ id: d.id, ...d.data() } as TreeEdge)));
       }
     );
-
-    return () => { unsubMembers(); unsubEdges(); };
+    const unsubTree = onSnapshot(doc(db, 'trees', treeId), (snap) => {
+      const data = snap.data();
+      if (data?.collapsedIds) {
+        useTreeStore.getState().setCollapsedIds(data.collapsedIds);
+      }
+    });
+    return () => { unsubMembers(); unsubEdges(); unsubTree(); };
   }, [treeId]);
 
   // ─── Mettre à jour les métadonnées de l'arbre ──────────────────────────────
@@ -147,6 +153,7 @@ const deleteMember = useCallback(async (memberId: string) => {
   const linkedEdges = edges.filter(
     e => allIds.includes(e.source) || allIds.includes(e.target)
   );
+
   await Promise.all(
     linkedEdges.map(e => deleteDoc(doc(db, 'trees', treeId, 'edges', e.id)))
   );
@@ -156,6 +163,14 @@ const deleteMember = useCallback(async (memberId: string) => {
 
 }, [treeId, edges, members, updateTreeMeta]);
 
+const saveCollapsedIds = useCallback(async (memberId: string) => {
+  // On récupère l'état actuel depuis le store pour avoir la version à jour
+  const { collapsedIds } = useTreeStore.getState();
+  await updateDoc(doc(db, 'trees', treeId), {
+    collapsedIds: Array.from(collapsedIds),
+  });
+}, [treeId]);
+
   return {
     members,
     edges,
@@ -164,5 +179,6 @@ const deleteMember = useCallback(async (memberId: string) => {
     addEdge,
     updateMember,
     deleteMember,
+    saveCollapsedIds
   };
 };

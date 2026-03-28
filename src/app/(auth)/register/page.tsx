@@ -22,13 +22,12 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       // 1. Créer l'utilisateur Firebase Auth
-      const { user } = await createUserWithEmailAndPassword(auth, email, password);
-
+      const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
       // 2. Mettre à jour le displayName
-      await updateProfile(user, { displayName: name });
+      await updateProfile(newUser, { displayName: name });
 
       // 3. Créer le document utilisateur dans Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      await setDoc(doc(db, 'users', newUser.uid), {
         displayName: name,
         email,
         createdAt: serverTimestamp(),

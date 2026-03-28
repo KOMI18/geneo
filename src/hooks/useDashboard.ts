@@ -2,18 +2,12 @@
 import { useEffect, useState } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useAuth } from './useAuth';
-
-export interface TreeSummary {
-  id: string;
-  name: string;
-  memberCount: number;
-  updatedAt: number;
-}
+import { useAuth } from '@/hooks/useAuth';
+import type { FamilyTree } from '@/types/tree';
 
 export function useDashboard() {
   const { user } = useAuth();
-  const [trees, setTrees] = useState<TreeSummary[]>([]);
+  const [trees, setTrees] = useState<FamilyTree[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,7 +20,7 @@ export function useDashboard() {
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      setTrees(snap.docs.map(d => ({ id: d.id, ...d.data() } as TreeSummary)));
+      setTrees(snap.docs.map(d => ({ id: d.id, ...d.data() } as FamilyTree)));
       setLoading(false);
     });
 

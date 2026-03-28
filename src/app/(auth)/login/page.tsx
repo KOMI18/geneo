@@ -18,8 +18,9 @@ const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
   setLoading(true);
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-    await setSessionCookie(); // ← ajouter cette ligne
+    const { user: loggedUser } = await signInWithEmailAndPassword(auth, email, password);
+    await setSessionCookie(loggedUser);
+
     router.push('/dashboard');
   } catch {
     setError('Email ou mot de passe incorrect.');

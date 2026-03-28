@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -17,18 +17,45 @@ import {
 import '@xyflow/react/dist/style.css';
 import { use } from "react";
 import { FamilyNode, FamilyNodeData } from '@/components/canvas/FamilyNode';
+import { useSearchParams } from 'next/navigation';
+import { CollapsedBubble } from '@/components/canvas/CollapsedBubble';
 import { AddMemberModal } from '@/components/canvas/AddMemberModal';
 import { useTreeStore } from '@/store/useTreeStore';
 import { useTreeData } from '@/hooks/useTreeData';
+import { useTreeRole } from '@/hooks/useTreeRole';
+import { useAuth } from '@/hooks/useAuth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { FamilyTree } from '@/types/tree';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import { EditMemberModal } from '@/components/canvas/EditMemberModal';
 import { DeleteConfirmModal } from '@/components/canvas/DeleteConfirmModal';
-const nodeTypes = { familyNode: FamilyNode };
+import { useCollapseTree } from '@/hooks/useCollapseTree';
+import { CustomEdge } from '@/components/canvas/CustomEdge';
+
+const edgeTypes = { customEdge: CustomEdge };
+const nodeTypes = {
+  familyNode: FamilyNode,
+  collapsedBubble: CollapsedBubble,
+};
 
 export default function TreePage({ params }: { params: Promise<{ treeId: string }> }) {
   const { treeId } = use(params);
+  const { user } = useAuth();
+  const [treeDoc, setTreeDoc] = useState<FamilyTree | null>(null);
+  const searchParams = useSearchParams();
+  const forcedViewer = searchParams?.get('role') === 'viewer';
+ const isAnonymous = user?.isAnonymous ?? false;
+   useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'trees', treeId), (snap) => {
+      if (snap.exists()) setTreeDoc({ id: snap.id, ...snap.data() } as FamilyTree);
+    });
+    return () => unsub();
+  }, [treeId]);
 
+  const role = useTreeRole(treeDoc);
+  const canEdit = !forcedViewer && !isAnonymous && (role === 'owner' || role === 'editor');
   // ─── Firebase ──────────────────────────────────────────────────────────────
   const {
     members,
@@ -38,6 +65,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     addEdge: addDbEdge,
     deleteMember,
     updateMember,
+    saveCollapsedIds,
   } = useTreeData(treeId);
 
   // ─── Store ─────────────────────────────────────────────────────────────────
@@ -47,7 +75,10 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [zoomedImage, setZoomedImage] = useState<{ url: string; name: string } | null>(null);
-
+  const handleExpand = useCallback((parentId: string) => {
+  useTreeStore.getState().toggleCollapse(parentId);
+  saveCollapsedIds(parentId);
+}, [saveCollapsedIds]);
   // ─── Sync Firestore → canvas nodes ────────────────────────────────────────
   useEffect(() => {
     const canvasNodes: Node[] = members.map((member) => ({
@@ -59,6 +90,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
         label: member.label,
         id: member.id,
         gender: member.gender,
+         canEdit,  
         photoURL: member.photoURL,
         onZoom: (url: string, name: string) => setZoomedImage({ url, name }),
         onAddSpouse: handleAddSpouse,
@@ -76,8 +108,17 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
       target: e.target,
       sourceHandle: (e as any).sourceHandle ?? 'bottom',
       targetHandle: (e as any).targetHandle ?? 'top',
-      type: e.type === 'spouse' ? 'straight' : 'smoothstep',
+      type: "customEdge",
       animated: e.type !== 'spouse',
+      data: {
+        type: e.type,
+        onToggleCollapse: async (parentId: string) => {
+          await saveCollapsedIds(parentId);
+        },
+        onSaveCollapse: async (id: string) => {
+          await saveCollapsedIds(id);
+        },
+      },
       style: {
         stroke: e.type === 'spouse' ? '#ec4899' : '#f97316',
         strokeWidth: 3,
@@ -86,7 +127,16 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     setEdges(canvasEdges);
     setStoreEdges(dbEdges);
   }, [dbEdges]);
+  const { nodes: visibleNodes, edges: visibleEdges } = useCollapseTree(nodes, edges);
 
+  const finalNodes = useMemo(() =>
+  visibleNodes.map(n =>
+    n.type === 'collapsedBubble'
+      ? { ...n, data: { ...n.data, onExpand: handleExpand } }
+      : n
+  ),
+  [visibleNodes, handleExpand]
+);
   // ─── Handlers ReactFlow ────────────────────────────────────────────────────
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -180,7 +230,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
 
       <div className="w-full h-full relative">
         {/* Écran vide */}
-        {nodes.length === 0 && (
+        {nodes.length === 0  && canEdit  && (
           <div className="absolute inset-0 z-20 flex items-center justify-center">
             <button
               onClick={() => openModal('root')}
@@ -198,8 +248,9 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
         )}
 
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={visibleNodes}
+          edges={visibleEdges}
+           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -232,14 +283,16 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
         </DialogContent>
       </Dialog>
 
-      <AddMemberModal onAdd={handleAdd} isSpouseMode={isSpouseMode} />
+      <AddMemberModal onAdd={handleAdd} isSpouseMode={isSpouseMode}   />
       <EditMemberModal onSave={async (id, updates, newPhoto) => {
           await updateMember(id, updates, newPhoto);
         }}
+        
       />
       <DeleteConfirmModal onConfirm={async (id) => {
           await deleteMember(id);
         }}
+      
       />
     </>
   );

@@ -10,7 +10,7 @@ import { ChevronLeft, LogOut } from 'lucide-react';
 export default function TreeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user } = useAuth();
-
+  const isAnonymous = user?.isAnonymous ?? false;
   const initials = user?.displayName
     ?.split(' ')
     .map((n) => n[0])
@@ -31,13 +31,15 @@ export default function TreeLayout({ children }: { children: React.ReactNode }) 
         
         {/* Gauche : retour + logo */}
         <div className="flex items-center gap-4">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-          >
-            <ChevronLeft size={16} />
-            Dashboard
-          </Link>
+          {!isAnonymous && (
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            >
+              <ChevronLeft size={16} />
+              Dashboard
+            </Link>
+          )}
           <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-800" />
            <div className="logo">
           <img src="/logo/logo.svg" className="w-10 h-10" alt="Logo de Geneo.io" />
@@ -52,13 +54,25 @@ export default function TreeLayout({ children }: { children: React.ReactNode }) 
           <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
             {initials}
           </div>
-          <button
+          {
+            isAnonymous ? (
+                  <Link
+                  href="/register"
+                  className="text-sm text-orange-500 font-bold border border-orange-200 px-3 py-1.5 rounded-lg hover:bg-orange-50 transition-colors"
+                >
+                  Créer un compte
+                </Link>
+            ) : (
+              <button
             onClick={handleLogout}
             className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
             title="Déconnexion"
           >
             <LogOut size={16} />
           </button>
+            )
+          }
+          
         </div>
       </header>
 
