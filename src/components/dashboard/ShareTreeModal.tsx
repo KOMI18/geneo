@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, Check, UserPlus, Trash2 } from 'lucide-react';
+import { Copy, Check, UserPlus, Trash2, Loader2 } from 'lucide-react';
 import type { FamilyTree, CollaboratorRole } from '@/types/tree';
 
 interface ShareTreeModalProps {
@@ -19,17 +19,21 @@ export function ShareTreeModal({ tree, onClose }: ShareTreeModalProps) {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [loadinLink, setLoadingLink] = useState(false);
   if (!tree) return null;
 
   // Générer ou récupérer le lien de partage
-  const shareUrl = tree.shareLink
-    ? `${window.location.origin}/join/${tree.shareLink}`
-    : null;
+  // const shareUrl = tree.shareLink
+  //   ? `${window.location.origin}/join/${tree.shareLink}`
+  //   : null;
 
   const handleGenerateLink = async () => {
+    setLoadingLink(true);
     const token = Math.random().toString(36).slice(2, 10);
     await updateDoc(doc(db, 'trees', tree.id), { shareLink: token });
+    setShareUrl(`${window.location.origin}/join/${token}`);
+    setLoadingLink(false);
   };
 
   const handleCopyLink = async () => {
@@ -123,13 +127,25 @@ const handleChangeRole = async (colEmail: string, newRole: CollaboratorRole) => 
                 </Button>
               </div>
             ) : (
-              <Button
-                type="button"
-                onClick={handleGenerateLink}
-                className="w-full h-10 border border-dashed border-zinc-300 dark:border-zinc-700 bg-transparent text-zinc-500 hover:border-orange-400 hover:text-orange-500"
-              >
-                Générer un lien
-              </Button>
+              <>
+                {loadinLink ? (
+                  <div className="flex gap-2 items-center">
+                    <Loader2 className="animate-spin" size={14} />
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">Générer le lien...</span>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleGenerateLink}
+                    className="w-full h-10 border border-dashed border-zinc-300 dark:border-zinc-700 bg-transparent text-zinc-500 hover:border-orange-400 hover:text-orange-500"
+                  >
+                    Générer un lien
+                  </Button>
+                )}
+              </>
+            
+              
+             
             )}
           </div>
 
