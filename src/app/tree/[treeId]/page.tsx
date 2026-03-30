@@ -98,7 +98,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     }));
     setNodes(canvasNodes);
     setMembers(members);
-  }, [members]);
+  }, [members , canEdit]);
 
   // ─── Sync Firestore → canvas edges ────────────────────────────────────────
   useEffect(() => {
@@ -216,7 +216,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     [openModal]
   );
 
-  if (loading) {
+  if (loading || !treeDoc) {
     return (
       <div className="h-screen flex items-center justify-center bg-zinc-50 dark:bg-[#080808]">
         <p className="text-zinc-400 animate-pulse">Chargement de l'arbre...</p>

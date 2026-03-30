@@ -24,7 +24,7 @@ function timeAgo(ts: number) {
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { trees, loading, totalMembers } = useDashboard();
+  const { trees, loading, totalMembers , ownTrees , sharedTrees } = useDashboard();
   const [sharingTree, setSharingTree] = useState<FamilyTree | null>(null);
   const handleLogout = async () => {
     await signOut(auth);
@@ -112,7 +112,7 @@ export default function DashboardPage() {
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {trees.map((tree) => (
+        {ownTrees.map((tree) => (
           <div key={tree.id} className="relative group text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors">
           <button
             onClick={() => router.push(`/tree/${tree.id}`)}
@@ -154,6 +154,43 @@ export default function DashboardPage() {
         </button>
 
       </div>
+      {sharedTrees.length > 0 && (
+          <>
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 mt-8">
+              Partagés avec moi
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {sharedTrees.map((tree) => {
+                // Chercher le rôle dans le tableau collaborators
+                const collaborator = tree.collaborators?.find(
+                  c => c.email === user?.email
+                );
+                const role = collaborator?.role;
+
+                return (
+                  <button
+                    key={tree.id}
+                    onClick={() => router.push(`/tree/${tree.id}`)}
+                    className="text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-100 flex items-center justify-center mb-3">
+                      <TreePine size={20} className="text-orange-500" />
+                    </div>
+                    <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{tree.name}</p>
+                    <p className="text-xs text-zinc-500 mt-1">{tree.memberCount} membres</p>
+                    <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium ${
+                      role === 'editor'
+                        ? 'bg-orange-50 text-orange-600'
+                        : 'bg-zinc-100 text-zinc-500'
+                    }`}>
+                      {role === 'editor' ? 'Éditeur' : 'Visiteur'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
     </main>
   );
 }

@@ -20,6 +20,11 @@ export interface TreeEdge {
   targetHandle?: string;
 }
 
+export interface Collaborator {
+  email: string;
+  role: CollaboratorRole;
+}
+
 export interface FamilyTree {
   id: string;
   name: string;
@@ -27,6 +32,6 @@ export interface FamilyTree {
   createdAt: number;
   memberCount: number;
   updatedAt: number;
-  collaborators?: Record<string, CollaboratorRole>; // email → role
-  shareLink?: string; // token unique
+  collaborators?: Collaborator[]; 
+  shareLink?: string;
 }

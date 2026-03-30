@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc  , arrayUnion , arrayRemove} from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -47,8 +47,8 @@ export function ShareTreeModal({ tree, onClose }: ShareTreeModalProps) {
 
     try {
       await updateDoc(doc(db, 'trees', tree.id), {
-        [`collaborators.${email.replace(/\./g, ',')}`]: role,
-      });
+      collaborators: arrayUnion({ email: email.trim().toLowerCase(), role }),
+    });
       setEmail('');
     } catch {
       setError('Erreur lors de l\'ajout du collaborateur.');
@@ -57,24 +57,25 @@ export function ShareTreeModal({ tree, onClose }: ShareTreeModalProps) {
     }
   };
 
-  const handleRemoveCollaborator = async (emailKey: string) => {
-    const { deleteField } = await import('firebase/firestore');
+  const handleRemoveCollaborator = async (colEmail: string) => {
+    const collaborator = tree.collaborators?.find(c => c.email === colEmail);
+    if (!collaborator) return;
     await updateDoc(doc(db, 'trees', tree.id), {
-      [`collaborators.${emailKey}`]: deleteField(),
+      collaborators: arrayRemove(collaborator),
     });
   };
 
-  const handleChangeRole = async (emailKey: string, newRole: CollaboratorRole) => {
-    await updateDoc(doc(db, 'trees', tree.id), {
-      [`collaborators.${emailKey}`]: newRole,
-    });
+  const handleChangeRole = async (colEmail: string, newRole: CollaboratorRole) => {
+    const old = tree.collaborators?.find(c => c.email === colEmail);
+      if (!old) return;
+      await updateDoc(doc(db, 'trees', tree.id), {
+        collaborators: arrayRemove(old),
+      });
+      await updateDoc(doc(db, 'trees', tree.id), {
+        collaborators: arrayUnion({ email: colEmail, role: newRole }),
+      });
   };
-
-  // Firestore n'accepte pas les "." dans les clés → on les remplace par ","
-  const collaborators = Object.entries(tree.collaborators ?? {}).map(
-    ([key, r]) => ({ email: key.replace(/,/g, '.'), key, role: r })
-  );
-
+    const collaborators = tree.collaborators ?? [];
   return (
     <Dialog open={!!tree} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[480px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
@@ -157,10 +158,11 @@ export function ShareTreeModal({ tree, onClose }: ShareTreeModalProps) {
                 Collaborateurs
               </label>
               <div className="space-y-2">
-                {collaborators.map(({ email: colEmail, key, role: colRole }) => (
+                {collaborators.map(({ email: colEmail, role: colRole }, key) => (
                   <div
                     key={key}
                     className="flex items-center justify-between p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800"
+                    style={{ borderBottomWidth: key === collaborators.length - 1 ? 0 : undefined }}
                   >
                     <span className="text-sm text-zinc-700 dark:text-zinc-300 truncate flex-1">
                       {colEmail}
@@ -168,14 +170,14 @@ export function ShareTreeModal({ tree, onClose }: ShareTreeModalProps) {
                     <div className="flex items-center gap-2 ml-2">
                       <select
                         value={colRole}
-                        onChange={(e) => handleChangeRole(key, e.target.value as CollaboratorRole)}
+                        onChange={(e) => handleChangeRole(colEmail, e.target.value as CollaboratorRole)}
                         className="text-xs h-7 px-1 border border-zinc-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
                       >
                         <option value="editor">Éditeur</option>
                         <option value="viewer">Visiteur</option>
                       </select>
                       <button
-                        onClick={() => handleRemoveCollaborator(key)}
+                        onClick={() => handleRemoveCollaborator(colEmail)}
                         className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                       >
                         <Trash2 size={13} />

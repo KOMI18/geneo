@@ -7,27 +7,56 @@ import type { FamilyTree } from '@/types/tree';
 
 export function useDashboard() {
   const { user } = useAuth();
-  const [trees, setTrees] = useState<FamilyTree[]>([]);
+  const [ownTrees, setOwnTrees] = useState<FamilyTree[]>([]);
+  const [sharedTrees, setSharedTrees] = useState<FamilyTree[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) return;
+useEffect(() => {
+  if (!user?.email) return;
 
-    const q = query(
-      collection(db, 'trees'),
-      where('ownerId', '==', user.uid),
-      orderBy('updatedAt', 'desc')
-    );
+  // Query ownTrees
+  const qOwn = query(
+    collection(db, 'trees'),
+    where('ownerId', '==', user.uid),
+    orderBy('updatedAt', 'desc')
+  );
 
-    const unsub = onSnapshot(q, (snap) => {
-      setTrees(snap.docs.map(d => ({ id: d.id, ...d.data() } as FamilyTree)));
-      setLoading(false);
-    });
+  const unsubOwn = onSnapshot(qOwn, (snap) => {
+    setOwnTrees(snap.docs.map(d => ({ id: d.id, ...d.data() } as FamilyTree)));
+    setLoading(false);
+  }, (err) => {
+    console.error('ownTrees error:', err.code, err.message);
+    setLoading(false);
+  });
 
-    return () => unsub();
-  }, [user]);
+  // Query sharedTrees — avec gestion d'erreur séparée
+  const qShared = query(
+    collection(db, 'trees'),
+    where('collaborators', 'array-contains-any', [
+      { email: user.email, role: 'editor' },
+      { email: user.email, role: 'viewer' },
+    ])
+  );
 
-  const totalMembers = trees.reduce((acc, t) => acc + (t.memberCount || 0), 0);
+  const unsubShared = onSnapshot(qShared, (snap) => {
+    setSharedTrees(snap.docs.map(d => ({ id: d.id, ...d.data() } as FamilyTree)));
+  }, (err) => {
+    // Log séparé pour identifier laquelle des deux queries échoue
+    console.error('sharedTrees error:', err.code, err.message);
+  });
 
-  return { trees, loading, totalMembers };
+  return () => { unsubOwn(); unsubShared(); };
+}, [user]);
+
+  const totalMembers = ownTrees.reduce((acc, t) => acc + (t.memberCount || 0), 0);
+
+  // On expose ownTrees et sharedTrees séparément pour le dashboard
+  // mais aussi trees (= ownTrees) pour ne pas casser le reste du code
+  return {
+    trees: ownTrees,      // ← rétrocompatibilité
+    ownTrees,
+    sharedTrees,
+    loading,
+    totalMembers,
+  };
 }
