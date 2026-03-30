@@ -409,7 +409,7 @@ const LandingPage: NextPage = () => {
               <div className="icon-wrap"><ShieldCheck size={20} /></div>
               <h3 className="display" style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>Sécurité & Confidentialité</h3>
               <div className="divider" />
-              <p style={{ color: 'var(--muted)', lineHeight: 1.7, fontSize: '14px' }}>Contrôlez qui peut voir ou modifier votre arbre. Données privées et sécurisées sur Firebase.</p>
+              <p style={{ color: 'var(--muted)', lineHeight: 1.7, fontSize: '14px' }}>Contrôlez qui peut voir ou modifier votre arbre. Données privées et sécurisées.</p>
             </div>
           </div>
         </div>
