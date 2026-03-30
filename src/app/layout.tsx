@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Geneo",
     description: "Votre héritage familial prend viee",
-    url: "https://geneo.vercel.app",
+    url: "https://geneo.invity.site",
     siteName: "Geneo",
     images: [
       {
