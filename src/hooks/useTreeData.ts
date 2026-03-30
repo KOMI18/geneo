@@ -10,8 +10,10 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
-  increment,  // ← nouveau
+  increment, 
+  
 } from 'firebase/firestore';
+
 import {
   ref,
   uploadString,
@@ -50,6 +52,7 @@ export const useTreeData = (treeId: string) => {
         useTreeStore.getState().setCollapsedIds(data.collapsedIds);
       }
     });
+
     return () => { unsubMembers(); unsubEdges(); unsubTree(); };
   }, [treeId]);
 

@@ -39,42 +39,57 @@ export function ShareTreeModal({ tree, onClose }: ShareTreeModalProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleAddCollaborator = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setError(null);
-    setLoading(true);
+const handleAddCollaborator = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!email.trim()) return;
+  setError(null);
+  setLoading(true);
+  try {
+    const emailLower = email.trim().toLowerCase();
+    const field = role === 'editor' ? 'editorEmails' : 'viewerEmails';
 
-    try {
-      await updateDoc(doc(db, 'trees', tree.id), {
-      collaborators: arrayUnion({ email: email.trim().toLowerCase(), role }),
-    });
-      setEmail('');
-    } catch {
-      setError('Erreur lors de l\'ajout du collaborateur.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveCollaborator = async (colEmail: string) => {
-    const collaborator = tree.collaborators?.find(c => c.email === colEmail);
-    if (!collaborator) return;
     await updateDoc(doc(db, 'trees', tree.id), {
-      collaborators: arrayRemove(collaborator),
+     
+      [field]: arrayUnion(emailLower),
+      
+      collaborators: arrayUnion({ email: emailLower, role }),
     });
-  };
+    setEmail('');
+  } catch {
+    setError('Erreur lors de l\'ajout.');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleChangeRole = async (colEmail: string, newRole: CollaboratorRole) => {
-    const old = tree.collaborators?.find(c => c.email === colEmail);
-      if (!old) return;
-      await updateDoc(doc(db, 'trees', tree.id), {
-        collaborators: arrayRemove(old),
-      });
-      await updateDoc(doc(db, 'trees', tree.id), {
-        collaborators: arrayUnion({ email: colEmail, role: newRole }),
-      });
-  };
+const handleRemoveCollaborator = async (colEmail: string) => {
+  const collaborator = tree.collaborators?.find(c => c.email === colEmail);
+  if (!collaborator) return;
+
+  const field = collaborator.role === 'editor' ? 'editorEmails' : 'viewerEmails';
+
+  await updateDoc(doc(db, 'trees', tree.id), {
+    [field]: arrayRemove(colEmail),
+    collaborators: arrayRemove(collaborator),
+  });
+};
+
+const handleChangeRole = async (colEmail: string, newRole: CollaboratorRole) => {
+  const old = tree.collaborators?.find(c => c.email === colEmail);
+  if (!old) return;
+
+  const oldField = old.role === 'editor' ? 'editorEmails' : 'viewerEmails';
+  const newField = newRole === 'editor' ? 'editorEmails' : 'viewerEmails';
+
+  await updateDoc(doc(db, 'trees', tree.id), {
+    [oldField]: arrayRemove(colEmail),
+    [newField]: arrayUnion(colEmail),
+    collaborators: arrayRemove(old),
+  });
+  await updateDoc(doc(db, 'trees', tree.id), {
+    collaborators: arrayUnion({ email: colEmail, role: newRole }),
+  });
+};
     const collaborators = tree.collaborators ?? [];
   return (
     <Dialog open={!!tree} onOpenChange={onClose}>

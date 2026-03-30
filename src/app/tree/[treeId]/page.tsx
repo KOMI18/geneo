@@ -56,6 +56,13 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
 
   const role = useTreeRole(treeDoc);
   const canEdit = !forcedViewer && !isAnonymous && (role === 'owner' || role === 'editor');
+  // ← ajouter temporairement
+    console.log('treeDoc:', treeDoc);
+    console.log('role:', role);
+    console.log('canEdit:', canEdit);
+    console.log('user email:', user?.email);
+    console.log('forcedViewer:', forcedViewer);
+    console.log('isAnonymous:', isAnonymous);
   // ─── Firebase ──────────────────────────────────────────────────────────────
   const {
     members,

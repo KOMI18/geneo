@@ -32,6 +32,9 @@ export interface FamilyTree {
   createdAt: number;
   memberCount: number;
   updatedAt: number;
-  collaborators?: Collaborator[]; 
+  editorEmails?: string[];
+  viewerEmails?: string[];
   shareLink?: string;
+  // Collaborators pour rétrocompatibilité affichage
+  collaborators?: Collaborator[];
 }
