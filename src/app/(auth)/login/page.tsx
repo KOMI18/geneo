@@ -77,7 +77,7 @@ const handleLogin = async (e: React.FormEvent) => {
         <Button
           type="submit"
           disabled={loading}
-          className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-lg shadow-orange-500/20"
+          className="w-full h-11 bg-[#f59e0b]  text-white font-bold "
         >
           {loading ? 'Connexion...' : 'Se connecter'}
         </Button>
@@ -85,7 +85,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
       <p className="text-center text-sm text-zinc-500 mt-6">
         Pas encore de compte ?{' '}
-        <Link href="/register" className="text-orange-500 font-bold hover:underline">
+        <Link href="/register" className="text-[#f59e0b] font-bold hover:underline">
           S'inscrire
         </Link>
       </p>

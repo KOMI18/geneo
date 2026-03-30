@@ -108,7 +108,7 @@ export default function RegisterPage() {
         <Button
           type="submit"
           disabled={loading}
-          className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-lg shadow-orange-500/20"
+          className="w-full h-11 bg-[#ffb86a]  text-white font-bold "
         >
           {loading ? 'Création...' : 'Créer mon compte'}
         </Button>
@@ -116,7 +116,7 @@ export default function RegisterPage() {
 
       <p className="text-center text-sm text-zinc-500 mt-6">
         Déjà un compte ?{' '}
-        <Link href="/login" className="text-orange-500 font-bold hover:underline">
+        <Link href="/login" className="text-[#ffb86a] font-bold hover:underline">
           Se connecter
         </Link>
       </p>
