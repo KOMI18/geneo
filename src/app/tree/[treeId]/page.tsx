@@ -265,10 +265,16 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
           nodeTypes={nodeTypes}
           snapToGrid
           snapGrid={[20, 20]}
-          fitView
+          fitView={true}
+           minZoom={0.1}      
+          maxZoom={2}        
+          fitViewOptions={{
+            padding: 0.2,    
+            includeHiddenNodes: false,
+          }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#998c70ff" />
-          <Controls />
+          <Controls showFitView={true} /> 
         </ReactFlow>
       </div>
 
