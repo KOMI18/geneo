@@ -4,8 +4,9 @@ import { useTreeStore } from '@/store/useTreeStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImagePlus, X } from 'lucide-react';
-
+import { ImagePlus, Loader2, X } from 'lucide-react';
+import { usePhoto } from '@/hooks/usePhoto';
+import { cn } from '@/lib/utils';
 interface AddMemberModalProps {
   onAdd: (parentId: string, name: string, gender: 'M' | 'F', photoURL?: string) => void;
   isSpouseMode: boolean; 
@@ -13,38 +14,47 @@ interface AddMemberModalProps {
 
 export function AddMemberModal({ onAdd  , isSpouseMode}: AddMemberModalProps) {
   const { isModalOpen, closeModal, parentIdForNewChild } = useTreeStore();
+  const { uploadToR2, isUploading } = usePhoto();
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'M' | 'F'>('M'); // État pour le genre
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   useEffect(() => {
     if (isModalOpen) {
       setGender(isSpouseMode ? 'F' : 'M');
     }
   }, [isModalOpen, isSpouseMode]);
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhoto(reader.result as string);
-      };
+      reader.onloadend = () => setPhotoPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit =  async (e: React.FormEvent) => {
     e.preventDefault();
-    // On vérifie que parentIdForNewChild existe (cela peut être "root" ou un ID de nœud)
-    if (name.trim() && parentIdForNewChild) {
-      onAdd(parentIdForNewChild, name, gender, photo || undefined);
+    setIsLoading(true);
+     if (!name.trim() || !parentIdForNewChild) return;
+      let finalPhotoURL = undefined;
+
+      if (selectedFile) {
+        const url = await uploadToR2(selectedFile);
+        if (url) finalPhotoURL = url;
+      }
+      onAdd(parentIdForNewChild, name, gender, finalPhotoURL || undefined);
       
       // Reset des champs
       setName('');
       setGender('M');
-      setPhoto(null);
+      setPhotoPreview(null);
+      setIsLoading(false);
       closeModal();
-    }
+    
   };
 
   return (
@@ -64,16 +74,16 @@ export function AddMemberModal({ onAdd  , isSpouseMode}: AddMemberModalProps) {
                 className="w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-900 border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:border-orange-500 transition-all"
                 onClick={() => fileInputRef.current?.click()}
               >
-                {photo ? (
-                  <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
                   <ImagePlus className="text-zinc-400" size={32} />
                 )}
               </div>
-              {photo && (
+              {photoPreview && (
                 <button 
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setPhoto(null); }}
+                  onClick={(e) => { e.stopPropagation(); setPhotoPreview(null); }}
                   className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
                 >
                   <X size={12} />
@@ -145,8 +155,18 @@ export function AddMemberModal({ onAdd  , isSpouseMode}: AddMemberModalProps) {
             <Button type="button" variant="ghost" onClick={closeModal} className="text-zinc-500">
               Annuler
             </Button>
-            <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 shadow-lg shadow-orange-500/20">
-              Ajouter au projet
+            <Button type="submit" disabled={isLoading} className={cn(
+              "bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 shadow-lg shadow-orange-500/20",
+              {"opacity-50 pointer-events-none": isLoading}
+            )}>
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-sm font-medium">Chargement...</span>
+                </span>
+              ) : (
+                <span>Ajouter a l'arbre</span>
+              )}
             </Button>
           </div>
         </form>

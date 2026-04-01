@@ -76,24 +76,21 @@ export const useTreeData = (treeId: string) => {
 
   // ─── Ajouter un membre ──────────────────────────────────────────────────────
   const addMember = useCallback(async (
-    memberData: Omit<TreeMember, 'id'>,
-    base64Photo?: string
+    memberData: Omit<TreeMember, 'id'>
+   
   ): Promise<string> => {
     const docRef = await addDoc(
       collection(db, 'trees', treeId, 'members'),
-      { ...memberData, photoURL: null, createdAt: serverTimestamp() }
+      { ...memberData,  createdAt: serverTimestamp() }
     );
 
-    if (base64Photo) {
-      const url = await uploadPhoto(docRef.id, base64Photo);
-      await updateDoc(docRef, { photoURL: url });
-    }
+  
 
     // +1 membre et timestamp
     await updateTreeMeta(+1);
 
     return docRef.id;
-  }, [treeId, uploadPhoto, updateTreeMeta]);
+  }, [treeId, updateTreeMeta]);
 
   // ─── Ajouter un edge ────────────────────────────────────────────────────────
   const addEdge = useCallback(async (edge: Omit<TreeEdge, 'id'>) => {

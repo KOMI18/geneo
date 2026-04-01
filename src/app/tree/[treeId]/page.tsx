@@ -27,7 +27,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { FamilyTree } from '@/types/tree';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle  } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import { EditMemberModal } from '@/components/canvas/EditMemberModal';
 import { DeleteConfirmModal } from '@/components/canvas/DeleteConfirmModal';
@@ -56,13 +56,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
 
   const role = useTreeRole(treeDoc);
   const canEdit = !forcedViewer && !isAnonymous && (role === 'owner' || role === 'editor');
-  // ← ajouter temporairement
-    console.log('treeDoc:', treeDoc);
-    console.log('role:', role);
-    console.log('canEdit:', canEdit);
-    console.log('user email:', user?.email);
-    console.log('forcedViewer:', forcedViewer);
-    console.log('isAnonymous:', isAnonymous);
+  
   // ─── Firebase ──────────────────────────────────────────────────────────────
   const {
     members,
@@ -196,10 +190,12 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
       }
 
       // 1. Créer le membre dans Firestore (avec position)
-      const newId = await addMember(
-        { label: name, gender, photoURL: null, position } as any,
-        photo
-      );
+      const newId = await addMember({ 
+          label: name, 
+          gender, 
+          photoURL: photo || null,
+          position 
+        } as any);
 
       // 2. Créer l'edge dans Firestore si parent existe
       if (parentId && parentId !== 'root') {
@@ -279,8 +275,14 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
       </div>
 
       {/* Zoom photo */}
+      
       <Dialog open={!!zoomedImage} onOpenChange={() => setZoomedImage(null)}>
-        <DialogContent className="max-w-3xl border-none bg-transparent p-0 shadow-none flex items-center justify-center">
+        <DialogContent className="max-w-3xl border-none bg-transparent p-0 shadow-none">
+          {/* Ajout du Header et du Title obligatoire */}
+          <DialogHeader className="sr-only">
+            <DialogTitle>{zoomedImage?.name}</DialogTitle>
+          </DialogHeader>
+
           {zoomedImage && (
             <div className="relative flex flex-col items-center gap-4">
               <img
