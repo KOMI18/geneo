@@ -6,11 +6,20 @@ import { auth, db } from '@/lib/firebase';
 import { clearSessionCookie } from '@/lib/session';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, TreePine, LogOut } from 'lucide-react';
+import { Plus, TreePine, LogOut, MoreHorizontal, Edit, Edit2, Delete, Trash2 } from 'lucide-react';
 import { ShareTreeModal } from '@/components/dashboard/ShareTreeModal';
 import { Share2 } from 'lucide-react';
 import type { FamilyTree } from '@/types/tree';
 import { useState } from 'react';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu"
 function timeAgo(ts: number) {
   const diff = Date.now() - ts;
   const h = Math.floor(diff / 3600000);
@@ -127,13 +136,49 @@ export default function DashboardPage() {
             <p className="text-xs text-zinc-500 mt-1">{tree.memberCount} membres</p>
             <p className="text-xs text-zinc-400 mt-2">{timeAgo(tree.updatedAt)}</p>
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setSharingTree(tree as FamilyTree); }}
-            className="absolute top-3 right-3 p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 opacity-0 group-hover:opacity-100 transition-all"
-            title="Partager"
-          >
-            <Share2 size={14} />
-          </button>
+          
+          <NavigationMenu className='absolute cursor-pointer top-3 right-3 '>
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <NavigationMenuTrigger> <MoreHorizontal/> </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <NavigationMenuLink>
+                        <button
+                      onClick={(e) => { e.stopPropagation(); setSharingTree(tree as FamilyTree); }}
+                      className=" cursor-pointer flex justify-between "
+                      title="Partager"
+                      
+                        >
+                      <Share2 size={14} />
+                      <span className='px-2'>Partager</span>
+                      </button>
+                    </NavigationMenuLink>
+                    <NavigationMenuLink>
+                        <button
+                      onClick={(e) => { e.stopPropagation(); setSharingTree(tree as FamilyTree); }}
+                      className=" cursor-pointer flex justify-between"
+                      title="Modifier"
+                      
+                        >
+                      <Edit2 size={14} />
+                      <span className='px-2'>Modifier</span>
+                    </button>
+                  </NavigationMenuLink>
+                  <NavigationMenuLink>
+                        <button
+                      onClick={(e) => { e.stopPropagation(); setSharingTree(tree as FamilyTree); }}
+                      className=" cursor-pointer flex justify-between"
+                      title="Supprimer"
+                      
+                        >
+                      <Trash2 size={14} />
+                      <span className='px-2'>Supprimer</span>
+                    </button>
+                  </NavigationMenuLink>
+                </NavigationMenuContent>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
           </div>
           
           

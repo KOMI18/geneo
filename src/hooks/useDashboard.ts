@@ -52,8 +52,7 @@ useEffect(() => {
 
   const totalMembers = ownTrees.reduce((acc, t) => acc + (t.memberCount || 0), 0);
   const sharedTrees = [...sharedEditorTrees, ...sharedViewerTrees];
-  // On expose ownTrees et sharedTrees séparément pour le dashboard
-  // mais aussi trees (= ownTrees) pour ne pas casser le reste du code
+  
   return {
     trees: ownTrees,      
     ownTrees,
