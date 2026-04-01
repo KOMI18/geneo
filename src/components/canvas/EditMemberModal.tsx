@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useTreeStore } from '@/store/useTreeStore';
 import { ImagePlus, X } from 'lucide-react';
 import type { TreeMember } from '@/types/tree';
-
+import { usePhoto } from '@/hooks/usePhoto';
 interface EditMemberModalProps {
   onSave: (id: string, updates: Partial<TreeMember>, newPhoto?: string) => Promise<void>;
 }
@@ -17,27 +17,30 @@ export function EditMemberModal({ onSave }: EditMemberModalProps) {
   const [gender, setGender] = useState<'M' | 'F'>('M');
   const [photo, setPhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { uploadToR2, isUploading } = usePhoto();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // Vérifie si ce membre est une épouse (cible d'un edge 'spouse')
   const isSpouse = edges.some(
     e => e.target === editingMember?.id && e.type === 'spouse'
   );
 
-  // Précharger les données du membre
-  useEffect(() => {
+ useEffect(() => {
     if (editingMember) {
       setName(editingMember.label);
       setGender(editingMember.gender);
-      setPhoto(editingMember.photoURL ?? null);
+      setPhotoPreview(editingMember.photoURL ?? null);
+      setSelectedFile(null); // Reset du fichier si on change de membre
     }
   }, [editingMember]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => setPhoto(reader.result as string);
+      reader.onloadend = () => setPhotoPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -47,17 +50,30 @@ export function EditMemberModal({ onSave }: EditMemberModalProps) {
     if (!editingMember || !name.trim()) return;
     setLoading(true);
 
-    const updates: Partial<TreeMember> = { label: name };
-    if (!isSpouse) updates.gender = gender;
+    try {
+      const updates: Partial<TreeMember> = { label: name };
+      if (!isSpouse) updates.gender = gender;
 
-    // On envoie la nouvelle photo seulement si elle a changé
-    const newPhoto = photo !== editingMember.photoURL ? photo ?? undefined : undefined;
+      let finalPhotoURL: string | undefined = undefined;
 
-    await onSave(editingMember.id, updates, newPhoto);
-    setLoading(false);
-    closeEditModal();
+      // Si l'utilisateur a sélectionné un nouveau fichier
+      if (selectedFile) {
+        const url = await uploadToR2(selectedFile);
+        if (url) finalPhotoURL = url;
+      } 
+      // Cas où l'utilisateur a cliqué sur le "X" pour supprimer la photo
+      else if (photoPreview === null && editingMember.photoURL) {
+        updates.photoURL = null as any; // On signalera à updateMember de supprimer
+      }
+
+      await onSave(editingMember.id, updates, finalPhotoURL);
+      closeEditModal();
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde", error);
+    } finally {
+      setLoading(false);
+    }
   };
-
   return (
     <Dialog open={!!editingMember} onOpenChange={closeEditModal}>
       <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
@@ -75,16 +91,16 @@ export function EditMemberModal({ onSave }: EditMemberModalProps) {
                 className="w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-900 border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden cursor-pointer hover:border-orange-500 transition-all"
                 onClick={() => fileInputRef.current?.click()}
               >
-                {photo ? (
-                  <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
                   <ImagePlus className="text-zinc-400" size={32} />
                 )}
               </div>
-              {photo && (
+              {photoPreview && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setPhoto(null); }}
+                  onClick={(e) => { e.stopPropagation(); setPhotoPreview(null); }}
                   className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                 >
                   <X size={12} />

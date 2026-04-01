@@ -5,19 +5,19 @@ import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
 
-  apiKey: "AIzaSyCj-MU_kpRc2sVlIjqphT36VlMcEshr6ws",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
 
-  authDomain: "covoituragebbc.firebaseapp.com",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAINE,
 
-  projectId: "covoituragebbc",
+  projectId:process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
 
-  storageBucket: "covoituragebbc.firebasestorage.app",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
 
-  messagingSenderId: "813461008345",
+  messagingSenderId:process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 
-  appId: "1:813461008345:web:c161e6851bcb4c398e33c8",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 
-  measurementId: "G-QS95L713L1"
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 
 };
 

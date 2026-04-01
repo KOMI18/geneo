@@ -42,6 +42,16 @@ export function usePhoto() {
       setIsUploading(false);
     }
   };
-
-  return { uploadToR2, isUploading, error };
+  const deletePhoto = async (photoURL: string) => {
+  try {
+    await fetch('/api/upload/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photoURL }),
+    });
+  } catch (err) {
+    console.error("Erreur lors de la suppression R2:", err);
+  }
+};
+  return { uploadToR2, isUploading, error  , deletePhoto};
 }

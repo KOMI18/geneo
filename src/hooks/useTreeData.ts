@@ -1,6 +1,6 @@
 // src/hooks/useTreeData.ts
 import { useEffect, useState, useCallback } from 'react';
-import { db, storage } from '@/lib/firebase';
+import { db, storage   } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -10,7 +10,8 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
-  increment, 
+  increment,
+  getDoc, 
   
 } from 'firebase/firestore';
 
@@ -22,12 +23,12 @@ import {
 } from 'firebase/storage';
 import type { TreeMember, TreeEdge } from '@/types/tree';
 import { useTreeStore } from '@/store/useTreeStore';
-
+import { usePhoto } from './usePhoto';
 export const useTreeData = (treeId: string) => {
   const [members, setMembers] = useState<TreeMember[]>([]);
   const [edges, setEdges] = useState<TreeEdge[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const {deletePhoto} = usePhoto();
   // ─── Listeners temps réel ───────────────────────────────────────────────────
   useEffect(() => {
     if (!treeId) return;
@@ -98,23 +99,36 @@ export const useTreeData = (treeId: string) => {
   }, [treeId]);
 
   // ─── Modifier un membre ─────────────────────────────────────────────────────
-  const updateMember = useCallback(async (
-    memberId: string,
-    updates: Partial<TreeMember>,
-    newBase64Photo?: string
-  ) => {
-    const memberRef = doc(db, 'trees', treeId, 'members', memberId);
+const updateMember = useCallback(async (
+  memberId: string,
+  updates: Partial<TreeMember>,
+  newPhotoURL?: string
+) => {
+  const memberRef = doc(db, 'trees', treeId, 'members', memberId);
+  
+  // 1. Récupérer l'ancien état pour le nettoyage R2
+  const memberSnap = await getDoc(memberRef);
+  const oldPhotoURL = memberSnap.data()?.photoURL;
 
-    if (newBase64Photo) {
-      const url = await uploadPhoto(memberId, newBase64Photo);
-      updates.photoURL = url;
-    }
+  // 2. Gérer le changement de photo
+  if (newPhotoURL) {
+    // Cas : Nouvelle photo uploadée
+    updates.photoURL = newPhotoURL;
+    if (oldPhotoURL) await deletePhoto(oldPhotoURL);
+  } else if (updates.photoURL === null && oldPhotoURL) {
+    // Cas : Photo supprimée (via le bouton X)
+    if (oldPhotoURL) await deletePhoto(oldPhotoURL);
+  }
 
-    await updateDoc(memberRef, updates);
+  // 3. Mise à jour Firestore
+  await updateDoc(memberRef, updates);
 
-    // On met à jour updatedAt sans toucher au memberCount
-    await updateDoc(doc(db, 'trees', treeId), { updatedAt: Date.now() });
-  }, [treeId, uploadPhoto]);
+  // 4. Update Meta (Timestamp uniquement)
+  await updateDoc(doc(db, 'trees', treeId), { 
+    updatedAt: serverTimestamp() 
+  });
+
+}, [treeId, deletePhoto]);
 
   // ─── Supprimer un membre + tous ses descendants en cascade ──────────────────
 const deleteMember = useCallback(async (memberId: string) => {
@@ -136,7 +150,7 @@ const deleteMember = useCallback(async (memberId: string) => {
       const member = members.find(m => m.id === id);
       if (member?.photoURL) {
         try {
-          await deleteObject(ref(storage, `trees/${treeId}/members/${id}/photo`));
+          await deletePhoto(member.photoURL);
         } catch {
           // photo déjà supprimée ou inaccessible, on ignore
         }
@@ -161,7 +175,7 @@ const deleteMember = useCallback(async (memberId: string) => {
   // 5. Mettre à jour memberCount
   await updateTreeMeta(-allIds.length);
 
-}, [treeId, edges, members, updateTreeMeta]);
+}, [treeId, edges, members, updateTreeMeta , deletePhoto]);
 
 const saveCollapsedIds = useCallback(async (memberId: string) => {
   // On récupère l'état actuel depuis le store pour avoir la version à jour
