@@ -21,9 +21,18 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
-function timeAgo(ts: number) {
-  const diff = Date.now() - ts;
-  const h = Math.floor(diff / 3600000);
+function timeAgo(ts: any) {
+  if (!ts) return "—";
+
+  // Si c'est un objet Timestamp de Firebase (possède .toMillis)
+  const timestamp = typeof ts.toMillis === 'function' ? ts.toMillis() : ts;
+  
+  const diff = Date.now() - timestamp;
+  
+  // Si le diff est négatif (horloge serveur vs locale), on met à 0
+  const seconds = Math.max(0, Math.floor(diff / 1000));
+  const h = Math.floor(seconds / 3600);
+  
   if (h < 1) return "À l'instant";
   if (h < 24) return `Il y a ${h}h`;
   const d = Math.floor(h / 24);
@@ -52,7 +61,7 @@ export default function DashboardPage() {
       name,
       ownerId: user.uid,
       memberCount: 0,
-      createdAt: serverTimestamp(),
+      createdAt: Date.now(),
       updatedAt: Date.now(),
     });
 

@@ -30,7 +30,7 @@ export default function RegisterPage() {
       await setDoc(doc(db, 'users', newUser.uid), {
         displayName: name,
         email,
-        createdAt: serverTimestamp(),
+        createdAt: Date.now(),
       });
       await setSessionCookie();
       router.push('/dashboard');

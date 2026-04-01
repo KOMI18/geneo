@@ -82,7 +82,7 @@ export const useTreeData = (treeId: string) => {
   ): Promise<string> => {
     const docRef = await addDoc(
       collection(db, 'trees', treeId, 'members'),
-      { ...memberData,  createdAt: serverTimestamp() }
+      { ...memberData,  createdAt: Date.now() }
     );
 
   
@@ -125,7 +125,7 @@ const updateMember = useCallback(async (
 
   // 4. Update Meta (Timestamp uniquement)
   await updateDoc(doc(db, 'trees', treeId), { 
-    updatedAt: serverTimestamp() 
+    updatedAt: Date.now() 
   });
 
 }, [treeId, deletePhoto]);
