@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Geneo",
-    description: "Votre héritage familial prend viee",
+    description: "Votre héritage familial prend vie",
     url: "https://geneo.invity.site",
     siteName: "Geneo",
     images: [

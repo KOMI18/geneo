@@ -134,7 +134,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {ownTrees.map((tree) => (
-          <div key={tree.id} className="relative group text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors">
+          <div key={tree.id} className="relative group cursor-pointer text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors">
           <button
             onClick={() => router.push(`/tree/${tree.id}`)}
             className=""
@@ -210,7 +210,7 @@ export default function DashboardPage() {
         {/* Nouvelle carte */}
         <button
           onClick={handleCreateTree}
-          className="flex flex-col items-center justify-center gap-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-4 min-h-[140px] hover:border-orange-400 transition-colors"
+          className="flex flex-col cursor-pointer items-center justify-center gap-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-4 min-h-[140px] hover:border-orange-400 transition-colors"
         >
           <div className="w-9 h-9 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 flex items-center justify-center">
             <Plus size={18} className="text-zinc-400" />
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                   <button
                     key={tree.id}
                     onClick={() => router.push(`/tree/${tree.id}`)}
-                    className="text-left bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors"
+                    className="text-left cursor-pointer bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 hover:border-orange-400 transition-colors"
                   >
                     <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-100 flex items-center justify-center mb-3">
                       <TreePine size={20} className="text-orange-500" />
