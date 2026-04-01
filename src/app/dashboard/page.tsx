@@ -10,6 +10,7 @@ import { Plus, TreePine, LogOut, MoreHorizontal, Edit, Edit2, Delete, Trash2 } f
 import { ShareTreeModal } from '@/components/dashboard/ShareTreeModal';
 import { Share2 } from 'lucide-react';
 import type { FamilyTree } from '@/types/tree';
+import { DeleteTreeModal } from '@/components/dashboard/DeleteTreeModal';
 import { useState } from 'react';
 import {
   NavigationMenu,
@@ -33,8 +34,9 @@ function timeAgo(ts: number) {
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { trees, loading, totalMembers , ownTrees , sharedTrees } = useDashboard();
+  const { trees, loading, totalMembers , ownTrees , sharedTrees , updateTreeName , deleteTree  } = useDashboard();
   const [sharingTree, setSharingTree] = useState<FamilyTree | null>(null);
+  const [treeToDelete, setTreeToDelete] = useState<{id: string, name: string} | null>(null);
   const handleLogout = async () => {
     await signOut(auth);
     clearSessionCookie();
@@ -55,6 +57,16 @@ export default function DashboardPage() {
     });
 
     router.push(`/tree/${docRef.id}`);
+  };
+  const handleEditTree = async (treeId: string, currentName: string) => {
+    const newName = prompt('Nouveau nom de l\'arbre :', currentName);
+    if (newName && newName !== currentName) {
+      try {
+        await updateTreeName(treeId, newName);
+      } catch (e) {
+        alert("Erreur lors de la modification");
+      }
+    }
   };
 
   // Initiales depuis displayName
@@ -142,9 +154,10 @@ export default function DashboardPage() {
               <NavigationMenuItem>
                 <NavigationMenuTrigger> <MoreHorizontal/> </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <NavigationMenuLink>
-                        <button
+                  <NavigationMenuLink 
                       onClick={(e) => { e.stopPropagation(); setSharingTree(tree as FamilyTree); }}
+                  >
+                        <button
                       className=" cursor-pointer flex justify-between "
                       title="Partager"
                       
@@ -153,9 +166,9 @@ export default function DashboardPage() {
                       <span className='px-2'>Partager</span>
                       </button>
                     </NavigationMenuLink>
-                    <NavigationMenuLink>
+                    <NavigationMenuLink onClick={() => handleEditTree(tree.id, tree.name)}>
                         <button
-                      onClick={(e) => { e.stopPropagation(); setSharingTree(tree as FamilyTree); }}
+                     
                       className=" cursor-pointer flex justify-between"
                       title="Modifier"
                       
@@ -164,9 +177,8 @@ export default function DashboardPage() {
                       <span className='px-2'>Modifier</span>
                     </button>
                   </NavigationMenuLink>
-                  <NavigationMenuLink>
+                  <NavigationMenuLink onClick={() => setTreeToDelete({ id: tree.id, name: tree.name })}>
                         <button
-                      onClick={(e) => { e.stopPropagation(); setSharingTree(tree as FamilyTree); }}
                       className=" cursor-pointer flex justify-between"
                       title="Supprimer"
                       
@@ -186,6 +198,14 @@ export default function DashboardPage() {
         <ShareTreeModal
           tree={sharingTree}
           onClose={() => setSharingTree(null)}
+        />
+        <DeleteTreeModal 
+          tree={treeToDelete}
+          isOpen={!!treeToDelete}
+          onClose={() => setTreeToDelete(null)}
+          onConfirm={async (id) => {
+            await deleteTree(id); 
+          }}
         />
         {/* Nouvelle carte */}
         <button
