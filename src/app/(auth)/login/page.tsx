@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter  , useSearchParams} from 'next/navigation';
@@ -31,7 +31,8 @@ const handleLogin = async (e: React.FormEvent) => {
 };
 
   return (
-    <div className="w-full  mx-auto align-center max-w-md margin-[100px] bg-white dark:bg-zinc-900 rounded-2xl  dark:border-zinc-800 p-8">
+    <Suspense fallback={<div>Chargement...</div>}>
+         <div className="w-full  mx-auto align-center max-w-md margin-[100px] bg-white dark:bg-zinc-900 rounded-2xl  dark:border-zinc-800 p-8">
       {/* Logo */}
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold italic text-zinc-900 dark:text-zinc-100">
@@ -91,5 +92,7 @@ const handleLogin = async (e: React.FormEvent) => {
         </Link>
       </p>
     </div>
+    </Suspense>
+   
   );
 }
