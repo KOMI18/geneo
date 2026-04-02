@@ -21,6 +21,7 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
+import { TreeSettingsModal } from '@/components/dashboard/TreeSettingsModal';
 function timeAgo(ts: any) {
   if (!ts) return "—";
 
@@ -46,38 +47,38 @@ export default function DashboardPage() {
   const { trees, loading, totalMembers , ownTrees , sharedTrees , updateTreeName , deleteTree  } = useDashboard();
   const [sharingTree, setSharingTree] = useState<FamilyTree | null>(null);
   const [treeToDelete, setTreeToDelete] = useState<{id: string, name: string} | null>(null);
+  const [treeModal, setTreeModal] = useState<{ 
+    isOpen: boolean; 
+    mode: 'create' | 'edit'; 
+    treeId?: string; 
+    initialName?: string; 
+  }>({
+    isOpen: false,
+    mode: 'create'
+  });
   const handleLogout = async () => {
     await signOut(auth);
     clearSessionCookie();
     router.push('/login');
   };
 
-  const handleCreateTree = async () => {
-    if (!user) return;
-    const name = prompt('Nom de votre arbre généalogique :');
-    if (!name?.trim()) return;
 
-    const docRef = await addDoc(collection(db, 'trees'), {
-      name,
-      ownerId: user.uid,
-      memberCount: 0,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    router.push(`/tree/${docRef.id}`);
-  };
-  const handleEditTree = async (treeId: string, currentName: string) => {
-    const newName = prompt('Nouveau nom de l\'arbre :', currentName);
-    if (newName && newName !== currentName) {
-      try {
-        await updateTreeName(treeId, newName);
-      } catch (e) {
-        alert("Erreur lors de la modification");
-      }
+  const handleSaveTree = async (name: string) => {
+    if (treeModal.mode === 'create') {
+      // Logique de création (ton addDoc actuel)
+      const docRef = await addDoc(collection(db, 'trees'), {
+        name,
+        ownerId: user?.uid,
+        memberCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: Date.now(),
+      });
+      router.push(`/tree/${docRef.id}`);
+    } else if (treeModal.mode === 'edit' && treeModal.treeId) {
+      // Logique d'édition via ton hook
+      await updateTreeName(treeModal.treeId, name);
     }
   };
-
   // Initiales depuis displayName
   const initials = user?.displayName
     ?.split(' ')
@@ -175,7 +176,14 @@ export default function DashboardPage() {
                       <span className='px-2'>Partager</span>
                       </button>
                     </NavigationMenuLink>
-                    <NavigationMenuLink onClick={() => handleEditTree(tree.id, tree.name)}>
+                    <NavigationMenuLink 
+                      onClick={() => setTreeModal({ 
+                            isOpen: true, 
+                            mode: 'edit', 
+                            treeId: tree.id, 
+                            initialName: tree.name 
+                          })}
+                    >
                         <button
                      
                       className=" cursor-pointer flex justify-between"
@@ -216,9 +224,16 @@ export default function DashboardPage() {
             await deleteTree(id); 
           }}
         />
+        <TreeSettingsModal
+        isOpen={treeModal.isOpen}
+        mode={treeModal.mode}
+        initialName={treeModal.initialName}
+        onClose={() => setTreeModal(prev => ({ ...prev, isOpen: false }))}
+        onSave={handleSaveTree}
+      />
         {/* Nouvelle carte */}
         <button
-          onClick={handleCreateTree}
+          onClick={() => setTreeModal({ isOpen: true, mode: 'create' })}
           className="flex flex-col cursor-pointer items-center justify-center gap-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-4 min-h-[140px] hover:border-orange-400 transition-colors"
         >
           <div className="w-9 h-9 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 flex items-center justify-center">
