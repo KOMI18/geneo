@@ -2,12 +2,14 @@
 import { Suspense, useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useRouter  , useSearchParams} from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { setSessionCookie } from '@/lib/session';
-export default function LoginPage() {
+
+// ✅ useSearchParams lives here, inside Suspense
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -15,37 +17,32 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    const { user: loggedUser } = await signInWithEmailAndPassword(auth, email, password);
-    await setSessionCookie(loggedUser);
-    const redirectTo = searchParams?.get('from');
-    router.push(redirectTo ? decodeURIComponent(redirectTo) : '/dashboard');
-  } catch {
-    setError('Email ou mot de passe incorrect.');
-  } finally {
-    setLoading(false);
-  }
-};
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { user: loggedUser } = await signInWithEmailAndPassword(auth, email, password);
+      await setSessionCookie(loggedUser);
+      const redirectTo = searchParams?.get('from');
+      router.push(redirectTo ? decodeURIComponent(redirectTo) : '/dashboard');
+    } catch {
+      setError('Email ou mot de passe incorrect.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
-         <div className="w-full  mx-auto align-center max-w-md margin-[100px] bg-white dark:bg-zinc-900 rounded-2xl  dark:border-zinc-800 p-8">
-      {/* Logo */}
+    <div className="w-full mx-auto max-w-md bg-white dark:bg-zinc-900 rounded-2xl dark:border-zinc-800 p-8">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold italic text-zinc-900 dark:text-zinc-100">
           Geneo <span className="text-orange-300">.io</span>
         </h1>
         <p className="text-sm text-zinc-500 mt-1">Connectez-vous à votre compte</p>
       </div>
-
       <form onSubmit={handleLogin} className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-            Email
-          </label>
+          <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Email</label>
           <Input
             type="email"
             placeholder="exemple@email.com"
@@ -55,11 +52,8 @@ const handleLogin = async (e: React.FormEvent) => {
             required
           />
         </div>
-
         <div className="space-y-2">
-          <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-            Mot de passe
-          </label>
+          <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Mot de passe</label>
           <Input
             type="password"
             placeholder="••••••••"
@@ -69,22 +63,13 @@ const handleLogin = async (e: React.FormEvent) => {
             required
           />
         </div>
-
         {error && (
-          <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
-            {error}
-          </p>
+          <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
         )}
-
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full h-11 bg-[#f59e0b]  text-white font-bold "
-        >
+        <Button type="submit" disabled={loading} className="w-full h-11 bg-[#f59e0b] text-white font-bold">
           {loading ? 'Connexion...' : 'Se connecter'}
         </Button>
       </form>
-
       <p className="text-center text-sm text-zinc-500 mt-6">
         Pas encore de compte ?{' '}
         <Link href="/register" className="text-[#f59e0b] font-bold hover:underline">
@@ -92,7 +77,14 @@ const handleLogin = async (e: React.FormEvent) => {
         </Link>
       </p>
     </div>
+  );
+}
+
+// ✅ Page just wraps the form in Suspense
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <LoginForm />
     </Suspense>
-   
   );
 }
