@@ -33,6 +33,7 @@ import { EditMemberModal } from '@/components/canvas/EditMemberModal';
 import { DeleteConfirmModal } from '@/components/canvas/DeleteConfirmModal';
 import { useCollapseTree } from '@/hooks/useCollapseTree';
 import { CustomEdge } from '@/components/canvas/CustomEdge';
+import { MemberNoteModal } from '@/components/canvas/MemberNoteModal';
 
 const edgeTypes = { customEdge: CustomEdge };
 const nodeTypes = {
@@ -304,6 +305,8 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
         }}
         
       />
+            <MemberNoteModal canEdit={canEdit} />
+      
       <DeleteConfirmModal onConfirm={async (id) => {
           await deleteMember(id);
         }}

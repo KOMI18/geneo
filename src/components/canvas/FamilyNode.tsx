@@ -1,8 +1,9 @@
 'use client';
 import { memo } from 'react';
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import {  Trash2, Edit2, MessageCircle,  } from 'lucide-react';
 import { useTreeStore } from '@/store/useTreeStore';
+import { MemberNoteModal } from './MemberNoteModal';
 
 // 1. On définit l'interface de ce que contient "data"
 export type FamilyNodeData = {
@@ -24,7 +25,10 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
   const collapsedIds = useTreeStore(s => s.collapsedIds);
   const toggleCollapse = useTreeStore(s => s.toggleCollapse);
   const edges = useTreeStore(s => s.edges);
-
+  const openNoteModal = useTreeStore(s => s.openNoteModal); // Récupère la fonction
+  
+  const currentMember = members.find(m => m.id === id);
+  const hasNote = !!currentMember?.note;
   const hasChildren = edges.some(
   e => e.source === id && e.type === 'child'
 );
@@ -51,7 +55,18 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
           )}
         </div>
         <span className="text-sm font-bold dark:text-zinc-100">{data.label}</span>
+       <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            if (currentMember) openNoteModal(currentMember);
+          }}
+          className={`absolute cursor-pointer top-3 right-3 p-1 rounded-full transition-colors 
+            ${hasNote ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-zinc-300 hover:text-zinc-500'}`}
+        >
+          <MessageCircle size={18} fill={hasNote ? "currentColor" : "none"} />
+        </div>
       </div>
+
       {
         data.canEdit && (
                 <div className="flex justify-between items-center mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">

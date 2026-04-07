@@ -62,7 +62,6 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-
   const handleSaveTree = async (name: string) => {
     if (treeModal.mode === 'create') {
       // Logique de création (ton addDoc actuel)
