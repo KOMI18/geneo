@@ -261,6 +261,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           snapToGrid
+          
           snapGrid={[20, 20]}
           fitView={true}
            minZoom={0.1}      
@@ -270,7 +271,16 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
             includeHiddenNodes: false,
           }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#998c70ff" />
+          <Background variant={BackgroundVariant.Dots} 
+          style={{ 
+        backgroundImage: "url(/back-1.jpg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backdropFilter: "blur(5px)",
+        backfaceVisibility: "hidden"
+      }} 
+      gap={20} size={1} color="#998c70ff" />
           <Controls showFitView={true} /> 
         </ReactFlow>
       </div>

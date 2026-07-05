@@ -42,17 +42,29 @@ export default function FamilyTree() {
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         fitView
+        style={{
+          backgroundImage: "url(/back.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat"
+
+        }}
         defaultEdgeOptions={{
           type: 'smoothstep',
           style: { strokeWidth: 2, stroke: '#94a3b8' }
         }}
       >
         <Background 
-          variant={BackgroundVariant.Dots} 
+          variant={BackgroundVariant.Cross} 
           gap={20} 
           size={1} 
-          color="#94a3b8" 
-          style={{ opacity: 0.2 }}
+          color="#94b89fff" 
+         style={{ 
+          opacity: 0.9, 
+          backgroundImage: "url(/back.jpg)",
+          backgroundSize: "cover", 
+          backgroundPosition: "center"
+        }}
         />
         <Controls />
       </ReactFlow>

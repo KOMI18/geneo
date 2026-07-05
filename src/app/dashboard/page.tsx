@@ -230,6 +230,7 @@ export default function DashboardPage() {
         onClose={() => setTreeModal(prev => ({ ...prev, isOpen: false }))}
         onSave={handleSaveTree}
       />
+      
         {/* Nouvelle carte */}
         <button
           onClick={() => setTreeModal({ isOpen: true, mode: 'create' })}
