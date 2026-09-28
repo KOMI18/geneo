@@ -222,7 +222,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
 
   if (loading || !treeDoc) {
     return (
-      <div className="h-screen flex items-center justify-center bg-zinc-50 dark:bg-[#080808]">
+      <div className="h-screen flex items-center justify-center bg-white dark:bg-[#080808]">
         <p className="text-zinc-400 animate-pulse">Chargement de l'arbre...</p>
       </div>
     );
@@ -232,7 +232,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     <>
     
 
-      <div className="w-full h-full relative">
+      <div className="w-full h-full relative bg-white dark:bg-[#080808]">
         {/* Écran vide */}
         {nodes.length === 0  && canEdit  && (
           <div className="absolute inset-0 z-20 flex items-center justify-center">
@@ -271,16 +271,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
             includeHiddenNodes: false,
           }}
         >
-          <Background variant={BackgroundVariant.Dots} 
-          style={{ 
-        backgroundImage: "url(/back-1.jpg)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        backdropFilter: "blur(5px)",
-        backfaceVisibility: "hidden"
-      }} 
-      gap={20} size={1} color="#998c70ff" />
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#998c70ff" />
           <Controls showFitView={true} /> 
         </ReactFlow>
       </div>

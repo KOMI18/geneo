@@ -33,7 +33,7 @@ export default function FamilyTree() {
   );
 
   return (
-    <div className="w-full h-screen bg-zinc-50 dark:bg-[#0b0b0b]">
+    <div className="w-full h-screen bg-white dark:bg-[#0b0b0b]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -42,13 +42,7 @@ export default function FamilyTree() {
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         fitView
-        style={{
-          backgroundImage: "url(/back.jpg)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat"
-
-        }}
+        style={{}}
         defaultEdgeOptions={{
           type: 'smoothstep',
           style: { strokeWidth: 2, stroke: '#94a3b8' }
@@ -59,12 +53,6 @@ export default function FamilyTree() {
           gap={20} 
           size={1} 
           color="#94b89fff" 
-         style={{ 
-          opacity: 0.9, 
-          backgroundImage: "url(/back.jpg)",
-          backgroundSize: "cover", 
-          backgroundPosition: "center"
-        }}
         />
         <Controls />
       </ReactFlow>
