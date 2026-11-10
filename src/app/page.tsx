@@ -1,584 +1,463 @@
 'use client';
 
-import type { NextPage } from 'next';
-import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, TreeDeciduous, Users, ShieldCheck, Share2, ChevronDown, Star, Menu, X } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { Fraunces } from 'next/font/google';
 import {
-  ReactFlow,
-  Background,
-  ConnectionLineType,
-  Node,
-  Edge,
-  Position,
-  useNodesState,
-  useEdgesState,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { fabricMotif, getTreeBackground } from '@/lib/treeBackgrounds';
+  ArrowRight,
+  BookOpenText,
+  Images,
+  Palette,
+  Share2,
+  ShieldCheck,
+  TreeDeciduous,
+  Users,
+} from 'lucide-react';
+import { fabricMotif, getTreeBackground, TREE_BACKGROUNDS } from '@/lib/treeBackgrounds';
+import './landing.css';
+
+// Titres : Fraunces (serif à taille optique). Texte courant : Geist, déjà chargée par le layout.
+const display = Fraunces({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  axes: ['opsz'],
+  variable: '--font-display',
+  display: 'swap',
+});
 
 // Tissus africains repris de l'espace de travail, aux couleurs de la page
-const FABRIC_PAGE = fabricMotif('ndop', '#c47820', 0.1);      // fond général, très discret
-const FABRIC_DARK = fabricMotif('bogolan', '#fffaf4', 0.1);   // sections brunes
-const FABRIC_SAND = fabricMotif('kuba', '#c47820', 0.08);     // section sable
-const FABRIC_KENTE = getTreeBackground('kente').image;        // liseré tissé
+const FABRICS = TREE_BACKGROUNDS.filter((p) => p.image);
+const pageVars = {
+  '--fabric-page': fabricMotif('ndop', '#c47820', 0.08), // fond général, très discret
+  '--fabric-dark': fabricMotif('bogolan', '#fffaf4', 0.07), // sections sombres
+  '--fabric-sand': fabricMotif('kuba', '#c47820', 0.07), // section sable
+  '--fabric-kente': getTreeBackground('kente').image, // liseré tissé
+} as CSSProperties;
 
-const demoNodes: Node[] = [
-  {
-    id: '1',
-    data: { label: '👴 Ibrahim Koné' },
-    position: { x: 160, y: 0 },
-    style: { background: '#ffb86a', color: '#1a1208', border: 'none', borderRadius: '12px', padding: '10px 18px', fontWeight: '700', fontSize: '13px', boxShadow: '0 4px 24px rgba(255,184,106,0.35)' },
-    sourcePosition: Position.Bottom, type: 'input',
-  },
-  {
-    id: '2', data: { label: '👨 Moussa Koné' }, position: { x: 20, y: 110 },
-    style: { background: '#fffaf4', color: '#c47820', border: '1.5px solid #ffb86a', borderRadius: '12px', padding: '10px 18px', fontWeight: '600', fontSize: '13px' },
-    sourcePosition: Position.Bottom, targetPosition: Position.Top,
-  },
-  {
-    id: '3', data: { label: '👩 Awa Koné' }, position: { x: 260, y: 110 },
-    style: { background: '#fffaf4', color: '#c47820', border: '1.5px solid #ffb86a', borderRadius: '12px', padding: '10px 18px', fontWeight: '600', fontSize: '13px' },
-    targetPosition: Position.Top, sourcePosition: Position.Bottom,
-  },
-  {
-    id: '4', data: { label: '👶 Petit Ibra' }, position: { x: 20, y: 220 },
-    style: { background: '#fff0dc', color: '#c47820', border: '1.5px dashed #ffb86a', borderRadius: '12px', padding: '10px 18px', fontSize: '13px' },
-    targetPosition: Position.Top, type: 'output',
-  },
-  {
-    id: '5', data: { label: '👶 Fatou' }, position: { x: 260, y: 220 },
-    style: { background: '#fff0dc', color: '#c47820', border: '1.5px dashed #ffb86a', borderRadius: '12px', padding: '10px 18px', fontSize: '13px' },
-    targetPosition: Position.Top, type: 'output',
-  },
-];
+const delay = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
 
-const demoEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2', type: ConnectionLineType.SmoothStep, animated: true, style: { stroke: '#ffb86a', strokeWidth: 2 } },
-  { id: 'e1-3', source: '1', target: '3', type: ConnectionLineType.SmoothStep, animated: true, style: { stroke: '#ffb86a', strokeWidth: 2 } },
-  { id: 'e2-4', source: '2', target: '4', type: ConnectionLineType.SmoothStep, style: { stroke: '#ffd9a8', strokeWidth: 1.5 } },
-  { id: 'e3-5', source: '3', target: '5', type: ConnectionLineType.SmoothStep, style: { stroke: '#ffd9a8', strokeWidth: 1.5 } },
-];
+// ─── Apparition au défilement : chaque bloc [data-reveal] entre une seule fois ──
+function useReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const els = root.querySelectorAll<HTMLElement>('[data-reveal]');
+    const show = (el: Element) => el.setAttribute('data-in', '');
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(show);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          show(entry.target);
+          io.unobserve(entry.target);
+        }),
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.08 }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
 
-function MiniTreeDemo() {
-  const [nodes, , onNodesChange] = useNodesState(demoNodes);
-  const [edges, , onEdgesChange] = useEdgesState(demoEdges);
+// ─── Compteur : affiche la valeur finale, puis la « compte » à l'entrée à l'écran ─
+function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
+  const [count, setCount] = useState(target);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let frame = 0;
+    const io = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      io.disconnect();
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min((now - start) / 1200, 1);
+        setCount(Math.round(target * (1 - Math.pow(1 - t, 4)))); // ease-out
+        if (t < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [target]);
   return (
-    <div style={{ height: '300px', width: '100%', background: '#fffaf4' }}>
-      <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} fitView attributionPosition="bottom-right" panOnDrag={false} zoomOnScroll={false}>
-        <Background color="#fff0dc" gap={24} size={1} />
-      </ReactFlow>
+    <span ref={ref}>
+      {count.toLocaleString('fr-FR')}
+      {suffix}
+    </span>
+  );
+}
+
+// ─── Démonstration : un arbre avec le même code couleur que l'application ─────
+const MALE = '#60a5fa';
+const FEMALE = '#f472b6';
+const CARD_W = 150;
+const CARD_H = 52;
+
+const people = [
+  { id: 'ibrahim', name: 'Ibrahim Koné', g: 'M', x: 270, y: 36 },
+  { id: 'aissata', name: 'Aïssata Koné', g: 'F', x: 500, y: 36 },
+  { id: 'moussa', name: 'Moussa Koné', g: 'M', x: 120, y: 186 },
+  { id: 'awa', name: 'Awa Koné', g: 'F', x: 385, y: 186 },
+  { id: 'seydou', name: 'Seydou Koné', g: 'M', x: 650, y: 186 },
+  { id: 'fatou', name: 'Fatou Koné', g: 'F', x: 30, y: 336 },
+  { id: 'ibra', name: 'Petit Ibra', g: 'M', x: 210, y: 336 },
+] as const;
+
+const childLinks = [
+  ['ibrahim', 'moussa'],
+  ['ibrahim', 'awa'],
+  ['ibrahim', 'seydou'],
+  ['moussa', 'fatou'],
+  ['moussa', 'ibra'],
+] as const;
+
+const byId = Object.fromEntries(people.map((p) => [p.id, p]));
+const curve = (x1: number, y1: number, x2: number, y2: number) => {
+  const mid = (y1 + y2) / 2;
+  return `M${x1} ${y1}C${x1} ${mid} ${x2} ${mid} ${x2} ${y2}`;
+};
+
+function DemoTree() {
+  const [fabricId, setFabricId] = useState(FABRICS[0].id);
+  const fabric = getTreeBackground(fabricId);
+  const seydou = byId.seydou;
+  const bubble = { x: seydou.x + CARD_W / 2, y: seydou.y + CARD_H + 62 };
+
+  return (
+    <div className="lp-window lp-enter" style={delay(320)}>
+      <div className="lp-window-bar">
+        <span className="lp-dots" aria-hidden>
+          <i /><i /><i />
+        </span>
+        <span className="lp-window-title">Famille Koné · 11 membres</span>
+        <div className="lp-fabrics" role="group" aria-label="Changer le tissu de fond">
+          {FABRICS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className="lp-fabric"
+              aria-pressed={p.id === fabricId}
+              onClick={() => setFabricId(p.id)}
+            >
+              <i style={{ backgroundImage: p.image ?? undefined }} />
+              {p.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="lp-stage">
+        <div className="lp-stage-fabric" style={{ backgroundImage: fabric.image ?? undefined }} />
+        <svg viewBox="0 0 920 430" role="img" aria-label="Exemple d'arbre : Ibrahim et Aïssata Koné, leurs trois enfants et deux petits-enfants">
+          {/* Mari et femme : trait rose continu */}
+          <path
+            d={`M${byId.ibrahim.x + CARD_W} ${byId.ibrahim.y + CARD_H / 2}H${byId.aissata.x}`}
+            stroke="#ec4899" strokeWidth="3" fill="none"
+          />
+          {/* Parent → enfant : pointillé orange */}
+          {childLinks.map(([from, to]) => {
+            const a = byId[from];
+            const b = byId[to];
+            return (
+              <path
+                key={to}
+                className="lp-flow"
+                d={curve(a.x + CARD_W / 2, a.y + CARD_H, b.x + CARD_W / 2, b.y)}
+                stroke="#f97316" strokeWidth="2.5" strokeDasharray="6 6" fill="none"
+              />
+            );
+          })}
+          {/* Descendance repliée */}
+          <path
+            d={`M${bubble.x} ${seydou.y + CARD_H}V${bubble.y - 22}`}
+            stroke="#f97316" strokeWidth="2" strokeDasharray="5 5" fill="none"
+          />
+          <circle cx={bubble.x} cy={bubble.y} r="22" fill="#fff" stroke="#fb923c" strokeWidth="2" strokeDasharray="5 4" />
+          <text x={bubble.x} y={bubble.y + 4.5} textAnchor="middle" fontSize="13" fontWeight="700" fill="#f97316">+4</text>
+
+          {people.map((p) => {
+            const color = p.g === 'M' ? MALE : FEMALE;
+            return (
+              <g key={p.id}>
+                <rect x={p.x} y={p.y} width={CARD_W} height={CARD_H} rx="13" fill="#fff" stroke={color} strokeWidth="2.5" />
+                <circle cx={p.x + 27} cy={p.y + CARD_H / 2} r="15" fill="#f4f4f5" />
+                <text x={p.x + 27} y={p.y + CARD_H / 2 + 5} textAnchor="middle" fontSize="14" fill={color}>
+                  {p.g === 'M' ? '♂' : '♀'}
+                </text>
+                <text x={p.x + 51} y={p.y + CARD_H / 2 + 4.5} fontSize="13" fontWeight="600" fill="#1a1208">
+                  {p.name}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 }
 
-function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      let start = 0;
-      const step = Math.ceil(target / 60);
-      const timer = setInterval(() => {
-        start += step;
-        if (start >= target) { setCount(target); clearInterval(timer); }
-        else setCount(start);
-      }, 16);
-      observer.disconnect();
-    });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [target]);
-  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
-}
+// ─── Contenu ──────────────────────────────────────────────────────────────────
+const stats = [
+  { n: 2400, suffix: '+', label: 'Familles actives' },
+  { n: 18000, suffix: '+', label: 'Membres documentés' },
+  { n: 95, suffix: ' %', label: 'Satisfaction' },
+  { n: 12, suffix: ' pays', label: 'Communautés' },
+];
 
-const LandingPage: NextPage = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
+const steps = [
+  { title: 'Créez votre compte', desc: 'Inscription gratuite en 30 secondes. Aucune carte bancaire requise.' },
+  { title: 'Ajoutez vos membres', desc: 'Commencez par vous-même, puis ajoutez parents, enfants et conjoints avec leurs photos.' },
+  { title: 'Partagez avec la famille', desc: 'Invitez vos proches par email ou par lien, et construisez l’arbre ensemble.' },
+];
+
+const quotes = [
+  { quote: 'Geneo a transformé nos réunions familiales. Maintenant tout le monde peut voir et contribuer à notre histoire.', author: 'Aminata Diallo', origin: 'Dakar, Sénégal', flag: '🇸🇳' },
+  { quote: 'J’ai documenté quatre générations de notre famille en moins d’une semaine. L’interface est intuitive et belle.', author: 'Kofi Mensah', origin: 'Accra, Ghana', flag: '🇬🇭' },
+  { quote: 'Le partage par lien change tout. Mes oncles au village peuvent voir l’arbre sans créer de compte.', author: 'Fatoumata Camara', origin: 'Conakry, Guinée', flag: '🇬🇳' },
+];
+
+export default function LandingPage() {
+  const ref = useReveal();
 
   return (
-    <>
-      <Head>
-        <title>Geneo — Votre histoire familiale, vivante</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-      </Head>
+    <div ref={ref} className={`lp ${display.variable}`} style={pageVars}>
+      {/* Sans JavaScript, tout reste visible */}
+      <noscript>
+        <style>{`.lp [data-reveal]{opacity:1;transform:none}`}</style>
+      </noscript>
 
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-          --primary: #ffb86a;
-          --primary-dark: #c47820;
-          --primary-light: #ffd9a8;
-          --cream: #fffaf4;
-          --cream-dark: #fff0dc;
-          --ink: #1a1208;
-          --muted: #8b7355;
-          --gold: #ffb86a;
-        }
-        html { scroll-behavior: smooth; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--cream) ${FABRIC_PAGE} 0 0 / 200px 200px; color: var(--ink); overflow-x: hidden; }
-
-        /* Tissus : halo crème derrière le texte du hero, liseré kente, sections habillées */
-        .hero-wrap { background: radial-gradient(ellipse 60% 75% at 24% 45%, var(--cream) 30%, rgba(255,250,244,0) 100%); }
-        .kente-strip { height: 8px; background: ${FABRIC_KENTE} 0 0 / 48px 48px; }
-        .nav .kente-strip { margin: 0 -5vw; }
-        .display { font-family: 'Playfair Display', serif; }
-
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(28px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        .fade-up { animation: fadeUp 0.8s ease forwards; }
-        .delay-1 { animation-delay: 0.1s; opacity: 0; }
-        .delay-2 { animation-delay: 0.25s; opacity: 0; }
-        .delay-3 { animation-delay: 0.4s; opacity: 0; }
-        .float-anim { animation: float 4s ease-in-out infinite; }
-
-        .nav { position: sticky; top: 0; z-index: 100; background: rgba(255,250,244,0.94); backdrop-filter: blur(12px); padding: 0 5vw; }
-        .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 68px; }
-        .nav-logo { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; color: var(--primary-dark); text-decoration: none; }
-        .nav-logo em { color: var(--primary); font-style: italic; }
-        .nav-links { display: flex; align-items: center; gap: 28px; }
-        .nav-link { font-size: 14px; color: var(--muted); text-decoration: none; font-weight: 500; transition: color 0.2s; }
-        .nav-link:hover { color: var(--primary-dark); }
-        .nav-mobile-btn { display: none; background: none; border: none; cursor: pointer; color: var(--ink); padding: 4px; }
-
-        .mobile-menu { display: none; }
-
-        .btn-primary {
-          display: inline-flex; align-items: center; gap: 8px;
-          background: var(--primary); color: var(--ink);
-          padding: 13px 26px; border-radius: 100px;
-          font-weight: 600; font-size: 15px; text-decoration: none;
-          transition: all 0.2s; box-shadow: 0 4px 20px rgba(255,184,106,0.4);
-          white-space: nowrap;
-        }
-        .btn-primary:hover { background: var(--primary-dark); color: white; transform: translateY(-1px); }
-        .btn-ghost {
-          display: inline-flex; align-items: center; gap: 8px;
-          background: transparent; color: var(--primary-dark);
-          padding: 13px 26px; border-radius: 100px;
-          font-weight: 500; font-size: 15px; text-decoration: none;
-          border: 1.5px solid var(--primary); transition: all 0.2s;
-          white-space: nowrap;
-        }
-        .btn-ghost:hover { background: var(--cream-dark); }
-
-        .tag { display: inline-block; background: var(--cream-dark); color: var(--primary-dark); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 14px; border-radius: 100px; margin-bottom: 18px; }
-        .divider { width: 56px; height: 3px; background: var(--primary); border-radius: 2px; margin: 14px 0 20px; }
-        .grain { position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; border-radius: inherit; }
-
-        .hero { max-width: 1200px; margin: 0 auto; padding: 72px 5vw 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
-        .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; }
-        .hero-stats { margin-top: 44px; display: flex; gap: 28px; flex-wrap: wrap; }
-        .hero-visual { position: relative; }
-        .hero-blob { position: absolute; top: -40px; right: -40px; width: 280px; height: 280px; background: var(--cream-dark); border-radius: 50%; z-index: 0; }
-        .hero-badge { position: absolute; bottom: -18px; left: -18px; background: white; border-radius: 16px; padding: 13px 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; z-index: 2; }
-
-        .stats-band { background: var(--primary-dark) ${FABRIC_DARK} 0 0 / 120px 120px; padding: 56px 5vw; margin: 40px 0; }
-        .stats-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
-
-        .features-section { max-width: 1200px; margin: 0 auto; padding: 80px 5vw; }
-        .features-grid-top { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .features-grid-bottom { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .feature-card { background: white; border: 1px solid var(--cream-dark); border-radius: 20px; padding: 32px 28px; transition: all 0.3s; }
-        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(255,184,106,0.15); border-color: var(--primary); }
-        .feature-card-dark { background: var(--primary-dark) ${FABRIC_DARK} 0 0 / 120px 120px; color: white; position: relative; overflow: hidden; }
-        .icon-wrap { width: 50px; height: 50px; border-radius: 14px; background: var(--cream-dark); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; color: var(--primary-dark); }
-
-        .how-section { background: var(--cream-dark) ${FABRIC_SAND} 0 0 / 80px 80px; padding: 80px 5vw; }
-        .how-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
-        .step { display: flex; gap: 22px; align-items: flex-start; }
-        .step-num { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 20px; color: var(--primary-dark); flex-shrink: 0; }
-
-        .testimonials-section { max-width: 1200px; margin: 0 auto; padding: 80px 5vw; }
-        .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .testimonial { background: white; border-radius: 20px; padding: 28px; border: 1px solid var(--cream-dark); }
-
-        .cta-section { margin: 0 4vw 72px; border-radius: 28px; background: var(--primary-dark) ${FABRIC_DARK} 0 0 / 120px 120px; padding: 72px 5vw; text-align: center; position: relative; overflow: hidden; }
-
-        .footer { background: var(--ink); padding: 56px 5vw 36px; }
-        .footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 56px; margin-bottom: 44px; }
-        .footer-bottom { max-width: 1200px; margin: 0 auto; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-
-        /* ── RESPONSIVE ─────────────────────────────────────────────── */
-
-        @media (max-width: 1024px) {
-          .hero { gap: 48px; padding: 56px 5vw 48px; }
-          .features-grid-top { grid-template-columns: 1fr; }
-          .how-inner { gap: 48px; }
-          .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 28px; }
-          .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
-        }
-
-        @media (max-width: 768px) {
-          .nav-links { display: none; }
-          .nav-mobile-btn { display: flex; }
-
-          .mobile-menu {
-            display: block;
-            position: fixed; top: 76px; left: 0; right: 0; bottom: 0;
-            background: var(--cream);
-            z-index: 99;
-            padding: 36px 6vw;
-            transform: translateX(100%);
-            transition: transform 0.28s ease;
-            overflow-y: auto;
-          }
-          .mobile-menu.open { transform: translateX(0); }
-          .mobile-nav-links { display: flex; flex-direction: column; gap: 6px; margin-bottom: 32px; }
-          .mobile-nav-links a { font-size: 22px; font-weight: 500; color: var(--ink); text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--cream-dark); display: block; }
-          .mobile-nav-btns { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
-          .mobile-nav-btns a { text-align: center; justify-content: center; width: 100%; }
-
-          .hero { grid-template-columns: 1fr; gap: 36px; padding: 44px 5vw 36px; }
-          .hero-blob { display: none; }
-          .hero-badge { display: none; }
-          .hero-btns { flex-direction: column; }
-          .hero-btns a { text-align: center; justify-content: center; }
-          .hero-stats { gap: 20px; }
-
-          .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
-          .stats-band { padding: 40px 5vw; margin: 24px 0; }
-
-          .features-grid-top { grid-template-columns: 1fr; }
-          .features-grid-bottom { grid-template-columns: 1fr; }
-          .features-section { padding: 56px 5vw; }
-
-          .how-inner { grid-template-columns: 1fr; gap: 36px; }
-          .how-section { padding: 56px 5vw; }
-          .how-visual { display: none; }
-
-          .testimonials-grid { grid-template-columns: 1fr; }
-          .testimonials-section { padding: 56px 5vw; }
-
-          .cta-section { margin: 0 3vw 48px; padding: 52px 5vw; border-radius: 20px; }
-
-          .footer-grid { grid-template-columns: 1fr; gap: 32px; }
-          .footer { padding: 44px 5vw 28px; }
-        }
-
-        @media (max-width: 480px) {
-          .stats-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
-          .hero-stats { flex-direction: column; gap: 14px; }
-          .btn-primary, .btn-ghost { width: 100%; justify-content: center; padding: 13px 20px; }
-          .hero { padding: 36px 5vw 28px; }
-        }
-      `}</style>
-
-      {/* ── NAV ─────────────────────────────────────────────────────────────── */}
-      <nav className="nav">
-        <div className="nav-inner">
-          <Link href="/" className="nav-logo">
-               <div className="logo">
-          <img src="/logo/logo.svg" className="w-20 h-20" alt="Logo de Geneo.io" />
-        </div>
+      {/* ── Navigation ─────────────────────────────────────────────────────── */}
+      <header className="lp-nav">
+        <div className="lp-container lp-nav-inner">
+          <Link href="/" className="lp-logo" aria-label="Geneo, accueil">
+            <img src="/logo/logo.svg" alt="Geneo.io" />
           </Link>
-          <div className="nav-links">
-            <a href="#features" className="nav-link">Fonctionnalités</a>
-            <a href="#how" className="nav-link">Comment ça marche</a>
-            <a href="#testimonials" className="nav-link">Témoignages</a>
-            <Link href="/login" className="nav-link">Connexion</Link>
-            <Link href="/register" className="btn-primary" style={{ padding: '10px 20px', fontSize: '14px' }}>
-              Commencer <ArrowRight size={14} />
-            </Link>
-          </div>
-          <button className="nav-mobile-btn" onClick={() => setMenuOpen(v => !v)} aria-label="Menu">
-            {menuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-        <div className="kente-strip" aria-hidden />
-      </nav>
-
-      {/* Mobile menu */}
-      <div className={`mobile-menu${menuOpen ? ' open' : ''}`}>
-        <div className="mobile-nav-links">
-          <a href="#features" onClick={() => setMenuOpen(false)}>Fonctionnalités</a>
-          <a href="#how" onClick={() => setMenuOpen(false)}>Comment ça marche</a>
-          <a href="#testimonials" onClick={() => setMenuOpen(false)}>Témoignages</a>
-          <Link href="/login" onClick={() => setMenuOpen(false)}>Connexion</Link>
-        </div>
-        <div className="mobile-nav-btns">
-          <Link href="/register" className="btn-primary" onClick={() => setMenuOpen(false)}>
-            Créer mon arbre gratuitement <ArrowRight size={16} />
-          </Link>
-        </div>
-      </div>
-
-      {/* ── HERO ─────────────────────────────────────────────────────────────── */}
-      <div className="hero-wrap">
-      <section className="hero">
-        <div>
-          {/* <div className="tag delay-1 fade-up">Arbre généalogique collaboratif</div> */}
-          <h1 className="display delay-2 fade-up" style={{ fontSize: 'clamp(36px, 5vw, 64px)', lineHeight: 1.08, fontWeight: 900, marginBottom: '20px' }}>
-            Donnez vie à votre{' '}
-            <em style={{ color: 'var(--primary)', fontStyle: 'italic' }}>histoire familiale</em>.
-          </h1>
-          <p className="delay-3 fade-up" style={{ fontSize: '17px', color: 'var(--muted)', lineHeight: 1.75, marginBottom: '34px', maxWidth: '460px' }}>
-            Visualisez, construisez et partagez votre arbre généalogique. Geneo rend l'exploration de vos racines simple, interactive et sécurisée.
-          </p>
-          <div className="hero-btns delay-3 fade-up">
-            <Link href="/register" className="btn-primary">
-              Créer mon arbre gratuitement <ArrowRight size={16} />
-            </Link>
-            <a href="#how" className="btn-ghost">
-              Comment ça marche <ChevronDown size={16} />
-            </a>
-          </div>
-          <div className="hero-stats">
-            {[['2 400+', 'familles actives'], ['18 000+', 'membres ajoutés'], ['4.9★', 'note moyenne']].map(([val, label]) => (
-              <div key={label}>
-                <div className="display" style={{ fontSize: '22px', fontWeight: 700, color: 'var(--primary-dark)' }}>{val}</div>
-                <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{label}</div>
-              </div>
-            ))}
+          <nav className="lp-nav-links" aria-label="Sections">
+            <a href="#fonctionnalites" className="lp-nav-link">Fonctionnalités</a>
+            <a href="#etapes" className="lp-nav-link">Comment ça marche</a>
+            <a href="#temoignages" className="lp-nav-link">Témoignages</a>
+          </nav>
+          <div className="lp-nav-actions">
+            <Link href="/login" className="lp-nav-link">Connexion</Link>
+            <Link href="/register" className="lp-btn lp-btn-primary lp-btn-sm">Commencer</Link>
           </div>
         </div>
+        <div className="lp-kente" aria-hidden />
+      </header>
 
-        <div className="hero-visual">
-          <div className="hero-blob" />
-          <div className="" style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ borderRadius: '22px', overflow: 'hidden', border: '1px solid var(--cream-dark)' }}>
-              <div style={{ background: 'var(--primary-dark)', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {['#ff6b6b', '#ffd93d', '#6bcb77'].map(c => (
-                  <div key={c} style={{ width: '11px', height: '11px', borderRadius: '50%', background: c }} />
-                ))}
-                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginLeft: '6px', fontFamily: 'monospace' }}>geneo.io/tree/famille-traore</span>
-              </div>
-              <MiniTreeDemo />
-            </div>
-          </div>
-          <div className="hero-badge">
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px' }}>🌳</div>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>Nouveau membre ajouté</div>
-              <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Fatou Traoré — il y a 2 min</div>
-            </div>
-          </div>
-        </div>
-      </section>
-      </div>
-
-      {/* ── STATS BAND ───────────────────────────────────────────────────────── */}
-      <section className="stats-band">
-        <div className="stats-grid">
-          {[
-            { n: 2400, suffix: '+', label: 'Familles actives' },
-            { n: 18000, suffix: '+', label: 'Membres documentés' },
-            { n: 95, suffix: '%', label: 'Satisfaction' },
-            { n: 12, suffix: ' pays', label: 'Communautés' },
-          ].map(({ n, suffix, label }) => (
-            <div key={label} style={{ textAlign: 'center' }}>
-              <div className="display" style={{ fontSize: 'clamp(30px, 4vw, 46px)', fontWeight: 900, color: 'var(--primary)' }}>
-                <Counter target={n} suffix={suffix} />
-              </div>
-              <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', marginTop: '6px' }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── FEATURES ─────────────────────────────────────────────────────────── */}
-      <section id="features" className="features-section">
-        <div style={{ textAlign: 'center', marginBottom: '52px' }}>
-          <div className="tag">Fonctionnalités</div>
-          <h2 className="display" style={{ fontSize: 'clamp(26px, 4vw, 48px)', fontWeight: 900, lineHeight: 1.1 }}>
-            Tout pour documenter<br />votre héritage
-          </h2>
-        </div>
-        <div className="features-grid-top">
-          <div className="feature-card feature-card-dark">
-            <div className="grain" />
-            <div style={{ position: 'relative' }}>
-              <div className="icon-wrap" style={{ background: 'rgba(255,255,255,0.15)', color: 'var(--primary)' }}>
-                <TreeDeciduous size={22} />
-              </div>
-              <h3 className="display" style={{ fontSize: '24px', fontWeight: 700, marginBottom: '12px', color: 'white' }}>Visualisation dynamique</h3>
-              <div className="divider" />
-              <p style={{ color: 'rgba(255,255,255,0.72)', lineHeight: 1.75, fontSize: '15px' }}>
-                Construisez votre arbre par simple glisser-déposer. Naviguez fluidement dans des arbres de centaines de membres, repliez les branches pour gagner de l'espace.
+      <main>
+        {/* ── Hero ─────────────────────────────────────────────────────────── */}
+        <section className="lp-hero">
+          <div className="lp-container">
+            <div className="lp-hero-copy">
+              <p className="lp-pill lp-enter">
+                <b>Nouveau</b> Des fonds en tissus africains pour votre arbre
               </p>
-              <div style={{ marginTop: '28px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                {['Drag & Drop', 'Collapse branches', 'Zoom infini', 'Photos'].map(f => (
-                  <span key={f} style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.88)', fontSize: '12px', padding: '5px 13px', borderRadius: '100px', fontWeight: 500 }}>{f}</span>
-                ))}
+              <h1 className="lp-display lp-h1 lp-enter" style={delay(60)}>
+                Donnez vie à votre <em>histoire familiale</em>.
+              </h1>
+              <p className="lp-lead lp-enter" style={delay(140)}>
+                Construisez, visualisez et partagez votre arbre généalogique. Simple pour les
+                aînés, vivant pour les plus jeunes, privé pour toute la famille.
+              </p>
+              <div className="lp-hero-actions lp-enter" style={delay(220)}>
+                <Link href="/register" className="lp-btn lp-btn-primary lp-btn-lg">
+                  Créer mon arbre gratuitement <ArrowRight size={18} />
+                </Link>
+                <a href="#etapes" className="lp-btn lp-btn-ghost lp-btn-lg">Comment ça marche</a>
               </div>
+              <p className="lp-hero-note lp-enter" style={delay(220)}>
+                Gratuit pour démarrer · Aucune carte bancaire
+              </p>
             </div>
+            <DemoTree />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div className="feature-card">
-              <div className="icon-wrap"><Users size={20} /></div>
-              <h3 className="display" style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>Collaboration familiale</h3>
-              <div className="divider" />
-              <p style={{ color: 'var(--muted)', lineHeight: 1.7, fontSize: '14px' }}>Invitez vos proches en tant qu'éditeurs ou visiteurs. Construisez ensemble en temps réel.</p>
-            </div>
-            <div className="feature-card">
-              <div className="icon-wrap"><ShieldCheck size={20} /></div>
-              <h3 className="display" style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>Sécurité & Confidentialité</h3>
-              <div className="divider" />
-              <p style={{ color: 'var(--muted)', lineHeight: 1.7, fontSize: '14px' }}>Contrôlez qui peut voir ou modifier votre arbre. Données privées et sécurisées.</p>
-            </div>
-          </div>
-        </div>
-        <div className="features-grid-bottom" style={{ marginTop: '20px' }}>
-          {[
-            { icon: Share2, title: 'Partage facile', desc: 'Un lien unique suffit. Vos proches accèdent à l\'arbre sans créer de compte.' },
-            { icon: Star, title: 'Photos & Portraits', desc: 'Ajoutez des photos pour chaque membre. L\'arbre devient un album vivant de votre famille.' },
-            { icon: TreeDeciduous, title: 'Arbres illimités', desc: 'Créez autant d\'arbres que vous voulez. Documentez plusieurs branches de votre famille.' },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="feature-card">
-              <div className="icon-wrap"><Icon size={20} /></div>
-              <h3 className="display" style={{ fontSize: '19px', fontWeight: 700, marginBottom: '10px' }}>{title}</h3>
-              <div className="divider" />
-              <p style={{ color: 'var(--muted)', lineHeight: 1.7, fontSize: '14px' }}>{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        </section>
 
-      {/* ── HOW IT WORKS ─────────────────────────────────────────────────────── */}
-      <section id="how" className="how-section">
-        <div className="how-inner">
-          <div>
-            <div className="tag">Comment ça marche</div>
-            <h2 className="display" style={{ fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 900, marginBottom: '40px', lineHeight: 1.15 }}>
-              Votre arbre en 3 étapes simples
+        {/* ── Chiffres ─────────────────────────────────────────────────────── */}
+        <section className="lp-dark lp-stats" aria-label="Geneo en chiffres">
+          <div className="lp-container lp-stats-grid">
+            {stats.map(({ n, suffix, label }, i) => (
+              <div key={label} className="lp-stat" data-reveal style={delay(i * 70)}>
+                <div className="lp-display lp-stat-n">
+                  <Counter target={n} suffix={suffix} />
+                </div>
+                <div className="lp-stat-l">{label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Fonctionnalités ──────────────────────────────────────────────── */}
+        <section id="fonctionnalites" className="lp-section">
+          <div className="lp-container">
+            <div className="lp-head" data-reveal>
+              <span className="lp-eyebrow">Fonctionnalités</span>
+              <h2 className="lp-display lp-h2">Tout pour documenter votre héritage.</h2>
+              <p className="lp-lead">
+                Un espace de travail pensé pour la famille entière, des grands-parents aux petits-enfants.
+              </p>
+            </div>
+
+            <div className="lp-bento">
+              <article className="lp-card lp-dark lp-wide" data-reveal>
+                <span className="lp-icon"><TreeDeciduous size={22} /></span>
+                <h3 className="lp-display lp-h3">Un arbre qui se manipule du bout des doigts</h3>
+                <p className="lp-body">
+                  Déplacez les membres par glisser-déposer, repliez une branche pour gagner de
+                  la place : toute la descendance suit le mouvement.
+                </p>
+                <div className="lp-tags">
+                  {['Glisser-déposer', 'Branches repliables', 'Zoom libre', 'Notes et anecdotes'].map((t) => (
+                    <span key={t}>{t}</span>
+                  ))}
+                </div>
+              </article>
+
+              <article className="lp-card" data-reveal style={delay(80)}>
+                <span className="lp-icon"><Palette size={22} /></span>
+                <h3 className="lp-display lp-h3">Des tissus qui nous ressemblent</h3>
+                <p className="lp-body">Ndop, Toghu, Bogolan, Kente, Wax, Kuba : choisissez le fond de votre arbre.</p>
+                <div className="lp-swatches" aria-hidden>
+                  {FABRICS.slice(0, 4).map((p) => (
+                    <i key={p.id} style={{ backgroundImage: p.image ?? undefined }} />
+                  ))}
+                </div>
+              </article>
+
+              <article className="lp-card" data-reveal>
+                <span className="lp-icon"><BookOpenText size={22} /></span>
+                <h3 className="lp-display lp-h3">Une légende claire pour nos aînés</h3>
+                <p className="lp-body">Chaque couleur a un sens, expliqué directement sur l’arbre.</p>
+                <ul className="lp-legend">
+                  <li><i style={{ borderColor: MALE }} /> Homme</li>
+                  <li><i style={{ borderColor: FEMALE }} /> Femme</li>
+                  <li><i className="line" style={{ borderColor: '#ec4899' }} /> Mari et femme</li>
+                  <li><i className="line dash" style={{ borderColor: '#f97316' }} /> Parent → enfant</li>
+                </ul>
+              </article>
+
+              <article className="lp-card" data-reveal style={delay(80)}>
+                <span className="lp-icon"><Users size={22} /></span>
+                <h3 className="lp-display lp-h3">Collaboration familiale</h3>
+                <p className="lp-body">
+                  Invitez vos proches comme éditeurs ou visiteurs. Chacun voit les changements en temps réel.
+                </p>
+              </article>
+
+              <article className="lp-card" data-reveal style={delay(160)}>
+                <span className="lp-icon"><Share2 size={22} /></span>
+                <h3 className="lp-display lp-h3">Partage par simple lien</h3>
+                <p className="lp-body">
+                  Un lien suffit : vos proches consultent l’arbre sans avoir à créer de compte.
+                </p>
+              </article>
+
+              <article className="lp-card" data-reveal>
+                <span className="lp-icon"><Images size={22} /></span>
+                <h3 className="lp-display lp-h3">Photos et portraits</h3>
+                <p className="lp-body">Ajoutez un visage à chaque nom. L’arbre devient l’album vivant de la famille.</p>
+              </article>
+
+              <article className="lp-card lp-wide" data-reveal style={delay(80)}>
+                <span className="lp-icon"><ShieldCheck size={22} /></span>
+                <h3 className="lp-display lp-h3">Privé par défaut</h3>
+                <p className="lp-body">
+                  Vous décidez qui peut voir ou modifier votre arbre. L’histoire de votre famille reste entre vos mains.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Étapes ───────────────────────────────────────────────────────── */}
+        <section id="etapes" className="lp-section lp-sand">
+          <div className="lp-container">
+            <div className="lp-head" data-reveal>
+              <span className="lp-eyebrow">Comment ça marche</span>
+              <h2 className="lp-display lp-h2">Votre arbre en trois étapes.</h2>
+            </div>
+            <ol className="lp-steps">
+              {steps.map(({ title, desc }, i) => (
+                <li key={title} className="lp-step" data-reveal style={delay(i * 90)}>
+                  <div className="lp-display lp-step-n">{i + 1}</div>
+                  <h3 className="lp-display lp-h3">{title}</h3>
+                  <p className="lp-body">{desc}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ── Témoignages ──────────────────────────────────────────────────── */}
+        <section id="temoignages" className="lp-section">
+          <div className="lp-container">
+            <div className="lp-head" data-reveal>
+              <span className="lp-eyebrow">Témoignages</span>
+              <h2 className="lp-display lp-h2">Ce que disent nos familles.</h2>
+            </div>
+            <div className="lp-quotes">
+              {quotes.map(({ quote, author, origin, flag }, i) => (
+                <figure key={author} className="lp-card lp-quote" data-reveal style={delay(i * 80)}>
+                  <blockquote>« {quote} »</blockquote>
+                  <footer>
+                    <span className="lp-avatar" aria-hidden>{flag}</span>
+                    <figcaption>
+                      <cite>{author}</cite>
+                      <small>{origin}</small>
+                    </figcaption>
+                  </footer>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Appel final ──────────────────────────────────────────────────── */}
+        <div className="lp-container">
+          <section className="lp-dark lp-cta" data-reveal>
+            <h2 className="lp-display lp-h2">
+              Prêt à explorer <em>vos racines</em> ?
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-              {[
-                { n: '1', title: 'Créez votre compte', desc: 'Inscription gratuite en 30 secondes. Aucune carte bancaire requise.' },
-                { n: '2', title: 'Ajoutez vos membres', desc: 'Commencez par vous-même, puis ajoutez parents, enfants et conjoints avec leurs photos.' },
-                { n: '3', title: 'Partagez avec votre famille', desc: 'Invitez vos proches par email ou lien. Construisez l\'arbre ensemble.' },
-              ].map(({ n, title, desc }) => (
-                <div key={n} className="step">
-                  <div className="step-num">{n}</div>
-                  <div>
-                    <div className="display" style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>{title}</div>
-                    <div style={{ color: 'var(--muted)', lineHeight: 1.7, fontSize: '15px' }}>{desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: '40px' }}>
-              <Link href="/register" className="btn-primary">Démarrer maintenant <ArrowRight size={16} /></Link>
-            </div>
-          </div>
-          <div className="how-visual">
-            <div style={{ background: 'white', borderRadius: '22px', padding: '28px', boxShadow: '0 16px 64px rgba(196,120,32,0.12)', border: '1px solid var(--cream-dark)' }}>
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <div className="display" style={{ fontSize: '17px', fontWeight: 700, color: 'var(--primary-dark)' }}>Famille Koné</div>
-                <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>5 membres · Dernière modif. il y a 2h</div>
-              </div>
-              {[
-                { emoji: '👴', name: 'Ibrahim Koné', role: 'Grand-père', color: '#c47820' },
-                { emoji: '👨', name: 'Moussa Koné', role: 'Père', color: '#ffb86a' },
-                { emoji: '👩', name: 'Awa Koné', role: 'Tante', color: '#ffb86a' },
-                { emoji: '👶', name: 'Petit Ibra', role: 'Enfant', color: '#ffd9a8' },
-              ].map(({ emoji, name, role, color }) => (
-                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px', borderRadius: '12px', marginBottom: '8px', background: 'var(--cream)', border: '1px solid var(--cream-dark)' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', border: `2px solid ${color}40`, flexShrink: 0 }}>{emoji}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{role}</div>
-                  </div>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, flexShrink: 0 }} />
-                </div>
-              ))}
-              <div style={{ marginTop: '12px', padding: '11px', borderRadius: '12px', border: '1.5px dashed var(--cream-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--primary-dark)', fontSize: '14px', fontWeight: 500 }}>
-                <span>+</span> Ajouter un membre
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ─────────────────────────────────────────────────────── */}
-      <section id="testimonials" className="testimonials-section">
-        <div style={{ textAlign: 'center', marginBottom: '52px' }}>
-          <div className="tag">Témoignages</div>
-          <h2 className="display" style={{ fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 900, lineHeight: 1.1 }}>Ce que disent nos familles</h2>
-        </div>
-        <div className="testimonials-grid">
-          {[
-            { quote: "Geneo a transformé nos réunions familiales. Maintenant tout le monde peut voir et contribuer à notre histoire. C'est magique.", author: 'Aminata Diallo', origin: 'Dakar, Sénégal', emoji: '🇸🇳' },
-            { quote: "J'ai documenté 4 générations de notre famille en moins d'une semaine. L'interface est tellement intuitive et belle.", author: 'Kofi Mensah', origin: 'Accra, Ghana', emoji: '🇬🇭' },
-            { quote: "Le partage par lien est révolutionnaire. Mes oncles au village peuvent voir l'arbre sans créer de compte. Parfait !", author: 'Fatoumata Camara', origin: 'Conakry, Guinée', emoji: '🇬🇳' },
-          ].map(({ quote, author, origin, emoji }) => (
-            <div key={author} className="testimonial">
-              <div style={{ display: 'flex', gap: '4px', marginBottom: '18px' }}>
-                {[...Array(5)].map((_, i) => <Star key={i} size={15} fill="var(--gold)" color="var(--gold)" />)}
-              </div>
-              <p style={{ color: 'var(--ink)', lineHeight: 1.75, fontSize: '15px', marginBottom: '20px', fontStyle: 'italic' }}>"{quote}"</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '18px', borderTop: '1px solid var(--cream-dark)' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '19px', flexShrink: 0 }}>{emoji}</div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '14px' }}>{author}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{origin}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── CTA ──────────────────────────────────────────────────────────────── */}
-      <section className="cta-section">
-        <div className="grain" />
-        <div style={{ position: 'absolute', top: '-80px', right: '-80px', width: '280px', height: '280px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-        <div style={{ position: 'absolute', bottom: '-60px', left: '-60px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
-        <div style={{ position: 'relative' }}>
-          <div className="display" style={{ fontSize: 'clamp(30px, 5vw, 56px)', fontWeight: 900, color: 'white', lineHeight: 1.1, marginBottom: '16px' }}>
-            Prêt à explorer<br /><em style={{ color: 'var(--primary)' }}>vos racines ?</em>
-          </div>
-          <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.65)', margin: '0 auto 32px', maxWidth: '460px', lineHeight: 1.65 }}>
-            Rejoignez des milliers de familles qui préservent leur histoire avec Geneo. C'est gratuit pour démarrer.
-          </p>
-          <Link href="/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--primary)', color: 'var(--ink)', padding: '14px 32px', borderRadius: '100px', fontSize: '16px', fontWeight: 700, textDecoration: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
-            Créer mon arbre gratuitement <ArrowRight size={18} />
-          </Link>
-        </div>
-      </section>
-
-      {/* ── FOOTER ───────────────────────────────────────────────────────────── */}
-      <div className="kente-strip" aria-hidden />
-      <footer className="footer">
-        <div className="footer-grid">
-          <div>
-            <div className="display" style={{ fontSize: '22px', fontWeight: 900, color: 'white', marginBottom: '14px' }}>
-              Geneo<span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>.io</span>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.42)', lineHeight: 1.7, fontSize: '14px', maxWidth: '280px' }}>
-              Propulsé par la technologie, enraciné dans la famille. Documentez votre héritage pour les générations futures.
+            <p className="lp-lead">
+              Commencez aujourd’hui, invitez la famille demain. C’est gratuit pour démarrer.
             </p>
-          </div>
-          <div>
-            <div style={{ color: 'rgba(255,255,255,0.28)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px' }}>Produit</div>
-            {['Fonctionnalités', 'Tarifs', 'Sécurité', 'Roadmap'].map(l => (
-              <div key={l} style={{ marginBottom: '10px' }}><a href="#" style={{ color: 'rgba(255,255,255,0.52)', fontSize: '14px', textDecoration: 'none' }}>{l}</a></div>
-            ))}
-          </div>
-          <div>
-            <div style={{ color: 'rgba(255,255,255,0.28)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px' }}>Entreprise</div>
-            {['À propos', 'Blog', 'Confidentialité', 'CGU'].map(l => (
-              <div key={l} style={{ marginBottom: '10px' }}><a href="#" style={{ color: 'rgba(255,255,255,0.52)', fontSize: '14px', textDecoration: 'none' }}>{l}</a></div>
-            ))}
-          </div>
+            <Link href="/register" className="lp-btn lp-btn-primary lp-btn-lg">
+              Créer mon arbre gratuitement <ArrowRight size={18} />
+            </Link>
+          </section>
         </div>
-        <div className="footer-bottom">
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.26)' }}>© 2026 Geneo Inc. Tous droits réservés.</div>
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.26)', fontStyle: 'italic' }}>Enraciné dans la famille 🌳</div>
+      </main>
+
+      {/* ── Pied de page ───────────────────────────────────────────────────── */}
+      <footer className="lp-footer">
+        <div className="lp-kente" aria-hidden />
+        <div className="lp-container">
+          <div className="lp-footer-inner">
+            <div>
+              <div className="lp-display lp-footer-brand">Geneo<em>.io</em></div>
+              <p>Enraciné dans la famille. Documentez votre héritage pour les générations futures.</p>
+            </div>
+            <nav aria-label="Pied de page">
+              <a href="#fonctionnalites">Fonctionnalités</a>
+              <a href="#etapes">Comment ça marche</a>
+              <a href="#temoignages">Témoignages</a>
+              <Link href="/login">Connexion</Link>
+              <Link href="/register">Créer un compte</Link>
+            </nav>
+          </div>
+          <div className="lp-footer-bottom">© 2026 Geneo. Tous droits réservés.</div>
         </div>
       </footer>
-    </>
+    </div>
   );
-};
-
-export default LandingPage;
+}
