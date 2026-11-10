@@ -9,7 +9,8 @@ interface TreePrefsStore {
   patternId: string;
   /** Opacité du tissu, de 0.1 (discret) à 1 (vif). */
   intensity: number;
-  legendOpen: boolean;
+  /** null = pas encore choisi : ouverte sur grand écran, repliée sur téléphone. */
+  legendOpen: boolean | null;
   setPattern: (id: string) => void;
   setIntensity: (value: number) => void;
   setLegendOpen: (open: boolean) => void;
@@ -21,11 +22,11 @@ export const useTreePrefsStore = create<TreePrefsStore>()(
     (set) => ({
       patternId: DEFAULT_TREE_BACKGROUND,
       intensity: DEFAULT_TREE_BACKGROUND_INTENSITY,
-      legendOpen: true,
+      legendOpen: null,
       setPattern: (patternId) => set({ patternId }),
       setIntensity: (intensity) => set({ intensity }),
       setLegendOpen: (legendOpen) => set({ legendOpen }),
     }),
-    { name: 'geneo-tree-prefs' }
+    { name: 'geneo-tree-prefs', version: 2, migrate: (state) => ({ ...(state as object), legendOpen: null }) as TreePrefsStore }
   )
 );

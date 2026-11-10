@@ -134,3 +134,15 @@
 @media (prefers-reduced-motion: reduce) {
   .tree-edge-flow { animation: none; }
 }
+
+/* Écran tactile : boutons de zoom assez grands pour le doigt */
+@media (hover: none) {
+  .react-flow__controls-button {
+    width: 44px;
+    height: 44px;
+  }
+  .react-flow__controls-button svg {
+    max-width: 16px;
+    max-height: 16px;
+  }
+}

@@ -2,6 +2,7 @@
 import { Panel } from '@xyflow/react';
 import { Info, MessageCircle, X } from 'lucide-react';
 import { useTreePrefsStore } from '@/store/useTreePrefsStore';
+import { useIsSmallScreen } from '@/hooks/useMediaQuery';
 
 const Row = ({ sample, title, hint }: { sample: React.ReactNode; title: string; hint?: string }) => (
   <li className="flex items-center gap-3">
@@ -29,7 +30,9 @@ const Line = ({ color, dashed }: { color: string; dashed?: boolean }) => (
 
 /** Légende du code couleur de l'arbre (les couleurs reprennent celles des cartes et des liens). */
 export function TreeLegend() {
-  const open = useTreePrefsStore((s) => s.legendOpen);
+  const choice = useTreePrefsStore((s) => s.legendOpen);
+  const isSmall = useIsSmallScreen();
+  const open = choice ?? !isSmall;
   const setOpen = useTreePrefsStore((s) => s.setLegendOpen);
 
   if (!open) {
@@ -38,7 +41,7 @@ export function TreeLegend() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:border-orange-400 hover:text-orange-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+          className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:border-orange-400 hover:text-orange-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
         >
           <Info size={16} />
           Légende
@@ -51,7 +54,7 @@ export function TreeLegend() {
     <Panel position="top-left">
       <section
         aria-label="Légende de l'arbre"
-        className="w-64 rounded-xl border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+        className="w-64 max-w-[calc(100vw-30px)] rounded-xl border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
       >
         <header className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-700 dark:text-zinc-200">
@@ -62,7 +65,7 @@ export function TreeLegend() {
             onClick={() => setOpen(false)}
             aria-label="Masquer la légende"
             title="Masquer la légende"
-            className="cursor-pointer rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800"
           >
             <X size={16} />
           </button>

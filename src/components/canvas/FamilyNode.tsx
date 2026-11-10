@@ -36,9 +36,13 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
       <Handle type="target" position={Position.Top}  id="top" className="w-2 h-2 bg-zinc-400" />
     <Handle type="target" position={Position.Left} id="left" className="opacity-0 group-hover:opacity-100 bg-pink-500" />
       
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 pr-8">
         <div 
-          onClick={() => data.photoURL && data.onZoom(data.photoURL, data.label)}
+          onClick={(e) => {
+            if (!data.photoURL) return;
+            e.stopPropagation();
+            data.onZoom(data.photoURL, data.label);
+          }}
           className="w-12 h-12 rounded-full border-2 border-zinc-100 overflow-hidden cursor-zoom-in"
         >
           {data.photoURL ? (
@@ -65,7 +69,7 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
 
       {
         data.canEdit && (
-                <div className="flex justify-between items-center mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex justify-between items-center mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity [@media(hover:none)]:hidden">
         <div className="flex gap-1">
           <button onClick={() => openDeleteModal(id)} className="p-1 cursor-pointer text-red-500 hover:bg-red-50 rounded"><Trash2 size={14} /></button>
           <button onClick={() => {

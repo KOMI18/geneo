@@ -25,9 +25,9 @@ export default function TreeLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-zinc-50 dark:bg-[#080808]">
+    <div className="h-dvh w-full flex flex-col overflow-hidden bg-zinc-50 dark:bg-[#080808]">
       {/* Header */}
-      <header className="h-14 shrink-0 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-10 flex items-center px-6 justify-between">
+      <header className="h-14 shrink-0 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-10 flex items-center px-3 sm:px-6 justify-between">
         
         {/* Gauche : retour + logo */}
         <div className="flex items-center gap-4">

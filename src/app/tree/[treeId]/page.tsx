@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   ReactFlow,
   Controls,
+  Panel,
   applyNodeChanges,
   applyEdgeChanges,
   Node,
@@ -26,7 +27,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { FamilyTree } from '@/types/tree';
 import { Dialog, DialogContent, DialogHeader, DialogTitle  } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
+import { Check, Move, Plus } from 'lucide-react';
 import { EditMemberModal } from '@/components/canvas/EditMemberModal';
 import { DeleteConfirmModal } from '@/components/canvas/DeleteConfirmModal';
 import { useCollapseTree } from '@/hooks/useCollapseTree';
@@ -36,6 +37,8 @@ import { TreeBackground } from '@/components/canvas/TreeBackground';
 import { BackgroundPicker } from '@/components/canvas/BackgroundPicker';
 import { TreeLegend } from '@/components/canvas/TreeLegend';
 import { buildFamilyIndex } from '@/lib/treeGraph';
+import { MemberSheet } from '@/components/canvas/MemberSheet';
+import { useIsTouch } from '@/hooks/useMediaQuery';
 
 const edgeTypes = { customEdge: CustomEdge };
 const DEFAULT_POSITION = { x: 400, y: 100 };
@@ -81,6 +84,11 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [zoomedImage, setZoomedImage] = useState<{ url: string; name: string } | null>(null);
+  // Tactile : toucher une carte ouvre un panneau d'actions ; les cartes ne bougent
+  // que si l'on active « Déplacer » (évite les déplacements accidentels).
+  const isTouch = useIsTouch();
+  const [sheetMemberId, setSheetMemberId] = useState<string | null>(null);
+  const [moveMode, setMoveMode] = useState(false);
   const nodesRef = useRef<Node[]>(nodes);
   useEffect(() => {
     nodesRef.current = nodes;
@@ -208,6 +216,13 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     []
   );
 
+  const onNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      if (isTouch && !moveMode && node.type === 'familyNode') setSheetMemberId(node.id);
+    },
+    [isTouch, moveMode]
+  );
+
   // ─── Déplacement : une seule écriture groupée au relâchement ──────────────
   const dragStart = useRef(new Map<string, { x: number; y: number }>());
 
@@ -306,7 +321,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
 
   if (loading || !treeDoc) {
     return (
-      <div className="h-screen flex items-center justify-center bg-white dark:bg-[#080808]">
+      <div className="h-full flex items-center justify-center bg-white dark:bg-[#080808]">
         <p className="text-zinc-400 animate-pulse">Chargement de l'arbre...</p>
       </div>
     );
@@ -342,6 +357,9 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          nodesDraggable={canEdit && (!isTouch || moveMode)}
+          nodesConnectable={!isTouch}
           onNodeDragStart={onNodeDragStart}
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
@@ -359,7 +377,31 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
           <TreeBackground />
           <BackgroundPicker />
           <TreeLegend />
-          <Controls showFitView={true} /> 
+          <Controls showFitView={true} showInteractive={false} />
+          {isTouch && canEdit && nodes.length > 0 && (
+            <Panel position="bottom-right">
+              <button
+                type="button"
+                onClick={() => setMoveMode((m) => !m)}
+                aria-pressed={moveMode}
+                className={`flex min-h-12 items-center gap-2 rounded-full px-5 text-base font-semibold shadow-md transition-transform active:scale-[0.97] ${
+                  moveMode
+                    ? 'bg-orange-500 text-white'
+                    : 'border border-zinc-200 bg-white text-zinc-800'
+                }`}
+              >
+                {moveMode ? <Check size={20} /> : <Move size={20} />}
+                {moveMode ? 'Terminer' : 'Déplacer'}
+              </button>
+            </Panel>
+          )}
+          {isTouch && moveMode && (
+            <Panel position="bottom-center">
+              <p className="rounded-full bg-zinc-900/85 px-4 py-2 text-sm font-medium text-white">
+                Faites glisser une carte pour la déplacer
+              </p>
+            </Panel>
+          )}
         </ReactFlow>
       </div>
 
@@ -386,6 +428,14 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
           )}
         </DialogContent>
       </Dialog>
+
+      <MemberSheet
+        memberId={sheetMemberId}
+        canEdit={canEdit}
+        onClose={() => setSheetMemberId(null)}
+        onToggleCollapse={handleToggleCollapse}
+        onZoom={handleZoom}
+      />
 
       <AddMemberModal onAdd={handleAdd} isSpouseMode={isSpouseMode}   />
       <EditMemberModal onSave={async (id, updates, newPhoto) => {
