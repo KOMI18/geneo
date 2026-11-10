@@ -5,6 +5,8 @@ import { buildFamilyIndex } from '@/lib/treeGraph';
 
 const BUBBLE_SIZE = 48;
 const DEFAULT_NODE_WIDTH = 180;
+const DEFAULT_NODE_HEIGHT = 100;
+const BUBBLE_GAP = 44; // espace entre la carte du parent et la bulle
 
 export function useCollapseTree(nodes: Node[], edges: Edge[]) {
   const collapsedIds = useTreeStore((s) => s.collapsedIds);
@@ -46,9 +48,13 @@ export function useCollapseTree(nodes: Node[], edges: Edge[]) {
       bubbleNodes.push({
         id: bubbleId,
         type: 'collapsedBubble',
+        // Dimensions fixées : la bulle n'est pas dans l'état des nodes, React Flow ne peut
+        // donc pas mémoriser sa mesure et la laisserait invisible.
+        width: BUBBLE_SIZE,
+        height: BUBBLE_SIZE,
         position: {
           x: parentNode.position.x + (parentWidth - BUBBLE_SIZE) / 2,
-          y: parentNode.position.y + 120,
+          y: parentNode.position.y + (parentNode.measured?.height ?? DEFAULT_NODE_HEIGHT) + BUBBLE_GAP,
         },
         data: {
           count: descendants.filter((id) => !parentSpouses.has(id)).length,
@@ -68,7 +74,6 @@ export function useCollapseTree(nodes: Node[], edges: Edge[]) {
         targetHandle: 'top',
         type: 'customEdge',
         data: { type: 'bubble' },
-        style: { stroke: '#f97316', strokeWidth: 2, strokeDasharray: '5 5' },
       });
     });
 

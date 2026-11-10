@@ -14,9 +14,9 @@ export function CollapsedBubble({ data }: NodeProps<Node<CollapsedBubbleData>>) 
       <Handle type="target" position={Position.Top} id="top" className="opacity-0" />
       <div
         onClick={() => data.onExpand(data.parentId)}
-        className="w-12 h-12 rounded-full bg-white dark:bg-zinc-900 border-2 border-dashed border-orange-400 flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 hover:scale-110 transition-all shadow-sm"
+        className="w-12 h-12 rounded-full bg-white dark:bg-zinc-900 border-[3px] border-dashed border-orange-500 flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 hover:scale-110 transition-all shadow-sm"
       >
-        <span className="text-orange-500 text-[10px] font-bold">+{data.count}</span>
+        <span className="text-orange-600 text-sm font-bold">+{data.count}</span>
       </div>
     </>
   );

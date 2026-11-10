@@ -124,3 +124,13 @@
     @apply bg-background text-foreground;
   }
 }
+/* Liens parent → enfant de l'arbre : le pointillé avance vers l'enfant */
+@keyframes tree-edge-dash {
+  to { stroke-dashoffset: -28; }
+}
+.tree-edge-flow {
+  animation: tree-edge-dash 1.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tree-edge-flow { animation: none; }
+}

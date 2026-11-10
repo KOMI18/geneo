@@ -163,12 +163,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
       sourceHandle: e.sourceHandle ?? 'bottom',
       targetHandle: e.targetHandle ?? 'top',
       type: "customEdge",
-      animated: e.type !== 'spouse',
       data: { type: e.type },
-      style: {
-        stroke: e.type === 'spouse' ? '#ec4899' : '#f97316',
-        strokeWidth: 3,
-      },
     }));
     setEdges(canvasEdges);
     setStoreEdges(dbEdges);
@@ -189,7 +184,11 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
 
   // ─── Handlers ReactFlow ────────────────────────────────────────────────────
   const onNodesChange: OnNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes) => {
+      // Les bulles « +N » sont calculées, pas stockées : leurs changements ne nous concernent pas
+      const own = changes.filter((c) => !('id' in c && c.id.startsWith('bubble-')));
+      if (own.length > 0) setNodes((nds) => applyNodeChanges(own, nds));
+    },
     []
   );
 
