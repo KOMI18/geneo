@@ -1,19 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Fraunces } from 'next/font/google';
-import {
-  ArrowRight,
-  BookOpenText,
-  Images,
-  Palette,
-  Share2,
-  ShieldCheck,
-  TreeDeciduous,
-  Users,
-} from 'lucide-react';
-import { fabricMotif, getTreeBackground, TREE_BACKGROUNDS } from '@/lib/treeBackgrounds';
+import { ArrowRight, Images, NotebookPen, ShieldCheck } from 'lucide-react';
+import { getTreeBackground, TREE_BACKGROUNDS } from '@/lib/treeBackgrounds';
 import './landing.css';
 
 // Titres : Fraunces (serif à taille optique). Texte courant : Geist, déjà chargée par le layout.
@@ -25,216 +17,161 @@ const display = Fraunces({
   display: 'swap',
 });
 
-// Tissus africains repris de l'espace de travail, aux couleurs de la page
 const FABRICS = TREE_BACKGROUNDS.filter((p) => p.image);
-const pageVars = {
-  '--fabric-page': fabricMotif('ndop', '#c47820', 0.08), // fond général, très discret
-  '--fabric-dark': fabricMotif('bogolan', '#fffaf4', 0.07), // sections sombres
-  '--fabric-sand': fabricMotif('kuba', '#c47820', 0.07), // section sable
-  '--fabric-kente': getTreeBackground('kente').image, // liseré tissé
-} as CSSProperties;
+const pageVars = { '--fabric-kente': getTreeBackground('kente').image } as CSSProperties;
 
-const delay = (ms: number) => ({ '--d': `${ms}ms` }) as CSSProperties;
-
-// ─── Apparition au défilement : chaque bloc [data-reveal] entre une seule fois ──
-function useReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const els = root.querySelectorAll<HTMLElement>('[data-reveal]');
-    const show = (el: Element) => el.setAttribute('data-in', '');
-    if (!('IntersectionObserver' in window)) {
-      els.forEach(show);
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          show(entry.target);
-          io.unobserve(entry.target);
-        }),
-      { rootMargin: '0px 0px -8% 0px', threshold: 0.08 }
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, []);
-  return ref;
-}
-
-// ─── Compteur : affiche la valeur finale, puis la « compte » à l'entrée à l'écran ─
-function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
-  const [count, setCount] = useState(target);
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let frame = 0;
-    const io = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      io.disconnect();
-      const start = performance.now();
-      const tick = (now: number) => {
-        const t = Math.min((now - start) / 1200, 1);
-        setCount(Math.round(target * (1 - Math.pow(1 - t, 4)))); // ease-out
-        if (t < 1) frame = requestAnimationFrame(tick);
-      };
-      frame = requestAnimationFrame(tick);
-    });
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      cancelAnimationFrame(frame);
-    };
-  }, [target]);
-  return (
-    <span ref={ref}>
-      {count.toLocaleString('fr-FR')}
-      {suffix}
-    </span>
-  );
-}
-
-// ─── Démonstration : un arbre avec le même code couleur que l'application ─────
+// Code couleur de l'application
 const MALE = '#60a5fa';
 const FEMALE = '#f472b6';
+const SPOUSE = '#ec4899';
+const CHILD = '#f97316';
 const CARD_W = 150;
 const CARD_H = 52;
 
-const people = [
-  { id: 'ibrahim', name: 'Ibrahim Koné', g: 'M', x: 270, y: 36 },
-  { id: 'aissata', name: 'Aïssata Koné', g: 'F', x: 500, y: 36 },
-  { id: 'moussa', name: 'Moussa Koné', g: 'M', x: 120, y: 186 },
-  { id: 'awa', name: 'Awa Koné', g: 'F', x: 385, y: 186 },
-  { id: 'seydou', name: 'Seydou Koné', g: 'M', x: 650, y: 186 },
-  { id: 'fatou', name: 'Fatou Koné', g: 'F', x: 30, y: 336 },
-  { id: 'ibra', name: 'Petit Ibra', g: 'M', x: 210, y: 336 },
-] as const;
+type Person = { id: string; name: string; g: 'M' | 'F'; x: number; y: number };
 
+const curve = (x1: number, y1: number, x2: number, y2: number) => {
+  const mid = (y1 + y2) / 2;
+  return `M${x1} ${y1}C${x1} ${mid} ${x2} ${mid} ${x2} ${y2}`;
+};
+
+function PersonCard({ p }: { p: Person }) {
+  const color = p.g === 'M' ? MALE : FEMALE;
+  return (
+    <g>
+      <rect x={p.x} y={p.y} width={CARD_W} height={CARD_H} rx="13" fill="#fff" stroke={color} strokeWidth="3" />
+      <circle cx={p.x + 27} cy={p.y + CARD_H / 2} r="15" fill="#f4f4f5" />
+      <text x={p.x + 27} y={p.y + CARD_H / 2 + 5} textAnchor="middle" fontSize="14" fill={color}>
+        {p.g === 'M' ? '♂' : '♀'}
+      </text>
+      <text x={p.x + 51} y={p.y + CARD_H / 2 + 4.5} fontSize="13" fontWeight="600" fill="#1a1208">
+        {p.name}
+      </text>
+    </g>
+  );
+}
+
+// ─── Hero : un arbre posé sur le tissu choisi ─────────────────────────────────
+const people: Person[] = [
+  { id: 'ibrahim', name: 'Ibrahim Koné', g: 'M', x: 95, y: 44 },
+  { id: 'aissata', name: 'Aïssata Koné', g: 'F', x: 315, y: 44 },
+  { id: 'moussa', name: 'Moussa Koné', g: 'M', x: 28, y: 214 },
+  { id: 'awa', name: 'Awa Koné', g: 'F', x: 205, y: 214 },
+  { id: 'seydou', name: 'Seydou Koné', g: 'M', x: 382, y: 214 },
+  { id: 'fatou', name: 'Fatou Koné', g: 'F', x: 28, y: 390 },
+  { id: 'ibra', name: 'Petit Ibra', g: 'M', x: 205, y: 390 },
+];
+const byId = Object.fromEntries(people.map((p) => [p.id, p]));
 const childLinks = [
   ['ibrahim', 'moussa'],
   ['ibrahim', 'awa'],
   ['ibrahim', 'seydou'],
   ['moussa', 'fatou'],
   ['moussa', 'ibra'],
-] as const;
+];
 
-const byId = Object.fromEntries(people.map((p) => [p.id, p]));
-const curve = (x1: number, y1: number, x2: number, y2: number) => {
-  const mid = (y1 + y2) / 2;
-  return `M${x1} ${y1}C${x1} ${mid} ${x2} ${mid} ${x2} ${y2}`;
-};
-
-function DemoTree() {
+function HeroTree() {
   const [fabricId, setFabricId] = useState(FABRICS[0].id);
   const fabric = getTreeBackground(fabricId);
   const seydou = byId.seydou;
-  const bubble = { x: seydou.x + CARD_W / 2, y: seydou.y + CARD_H + 62 };
+  const bubble = { x: seydou.x + CARD_W / 2, y: seydou.y + CARD_H + 64 };
 
   return (
-    <div className="lp-window lp-enter" style={delay(320)}>
-      <div className="lp-window-bar">
-        <span className="lp-dots" aria-hidden>
-          <i /><i /><i />
-        </span>
-        <span className="lp-window-title">Famille Koné · 11 membres</span>
-        <div className="lp-fabrics" role="group" aria-label="Changer le tissu de fond">
-          {FABRICS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className="lp-fabric"
-              aria-pressed={p.id === fabricId}
-              onClick={() => setFabricId(p.id)}
-            >
-              <i style={{ backgroundImage: p.image ?? undefined }} />
-              {p.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="lp-stage">
-        <div className="lp-stage-fabric" style={{ backgroundImage: fabric.image ?? undefined }} />
-        <svg viewBox="0 0 920 430" role="img" aria-label="Exemple d'arbre : Ibrahim et Aïssata Koné, leurs trois enfants et deux petits-enfants">
-          {/* Mari et femme : trait rose continu */}
+    <div>
+      <div className="lp-panel lp-tree">
+        <div className="lp-tree-fabric" style={{ backgroundImage: fabric.image ?? undefined }} />
+        <svg
+          viewBox="0 0 560 500"
+          role="img"
+          aria-label="Exemple d'arbre : Ibrahim et Aïssata Koné, leurs trois enfants et deux petits-enfants"
+        >
+          {/* Les liens passent sur un filet blanc pour rester lisibles sur tous les tissus */}
+          <g fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round">
+            <path d={`M${byId.ibrahim.x + CARD_W} ${byId.ibrahim.y + CARD_H / 2}H${byId.aissata.x}`} />
+            {childLinks.map(([from, to]) => (
+              <path key={to} d={curve(byId[from].x + CARD_W / 2, byId[from].y + CARD_H, byId[to].x + CARD_W / 2, byId[to].y)} />
+            ))}
+            <path d={`M${bubble.x} ${seydou.y + CARD_H}V${bubble.y - 22}`} />
+          </g>
           <path
             d={`M${byId.ibrahim.x + CARD_W} ${byId.ibrahim.y + CARD_H / 2}H${byId.aissata.x}`}
-            stroke="#ec4899" strokeWidth="3" fill="none"
+            stroke={SPOUSE} strokeWidth="3" fill="none"
           />
-          {/* Parent → enfant : pointillé orange */}
-          {childLinks.map(([from, to]) => {
-            const a = byId[from];
-            const b = byId[to];
-            return (
-              <path
-                key={to}
-                className="lp-flow"
-                d={curve(a.x + CARD_W / 2, a.y + CARD_H, b.x + CARD_W / 2, b.y)}
-                stroke="#f97316" strokeWidth="2.5" strokeDasharray="6 6" fill="none"
-              />
-            );
-          })}
-          {/* Descendance repliée */}
+          {childLinks.map(([from, to]) => (
+            <path
+              key={to}
+              className="lp-flow"
+              d={curve(byId[from].x + CARD_W / 2, byId[from].y + CARD_H, byId[to].x + CARD_W / 2, byId[to].y)}
+              stroke={CHILD} strokeWidth="3" strokeDasharray="6 6" fill="none"
+            />
+          ))}
           <path
             d={`M${bubble.x} ${seydou.y + CARD_H}V${bubble.y - 22}`}
-            stroke="#f97316" strokeWidth="2" strokeDasharray="5 5" fill="none"
+            stroke={CHILD} strokeWidth="2.5" strokeDasharray="5 5" fill="none"
           />
-          <circle cx={bubble.x} cy={bubble.y} r="22" fill="#fff" stroke="#fb923c" strokeWidth="2" strokeDasharray="5 4" />
-          <text x={bubble.x} y={bubble.y + 4.5} textAnchor="middle" fontSize="13" fontWeight="700" fill="#f97316">+4</text>
-
-          {people.map((p) => {
-            const color = p.g === 'M' ? MALE : FEMALE;
-            return (
-              <g key={p.id}>
-                <rect x={p.x} y={p.y} width={CARD_W} height={CARD_H} rx="13" fill="#fff" stroke={color} strokeWidth="2.5" />
-                <circle cx={p.x + 27} cy={p.y + CARD_H / 2} r="15" fill="#f4f4f5" />
-                <text x={p.x + 27} y={p.y + CARD_H / 2 + 5} textAnchor="middle" fontSize="14" fill={color}>
-                  {p.g === 'M' ? '♂' : '♀'}
-                </text>
-                <text x={p.x + 51} y={p.y + CARD_H / 2 + 4.5} fontSize="13" fontWeight="600" fill="#1a1208">
-                  {p.name}
-                </text>
-              </g>
-            );
-          })}
+          <circle cx={bubble.x} cy={bubble.y} r="22" fill="#fff" stroke={CHILD} strokeWidth="2.5" strokeDasharray="5 4" />
+          <text x={bubble.x} y={bubble.y + 4.5} textAnchor="middle" fontSize="13" fontWeight="700" fill={CHILD}>+4</text>
+          {people.map((p) => <PersonCard key={p.id} p={p} />)}
         </svg>
+      </div>
+
+      <div className="lp-fabrics" role="group" aria-label="Changer le tissu de fond">
+        <span className="lp-label">Fond : {fabric.name}, {fabric.origin}</span>
+        {FABRICS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className="lp-fabric"
+            title={p.name}
+            aria-label={`Tissu ${p.name}`}
+            aria-pressed={p.id === fabricId}
+            onClick={() => setFabricId(p.id)}
+            style={{ backgroundImage: p.image ?? undefined }}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-// ─── Contenu ──────────────────────────────────────────────────────────────────
-const stats = [
-  { n: 2400, suffix: '+', label: 'Familles actives' },
-  { n: 18000, suffix: '+', label: 'Membres documentés' },
-  { n: 95, suffix: ' %', label: 'Satisfaction' },
-  { n: 12, suffix: ' pays', label: 'Communautés' },
-];
+// ─── Illustration de la légende ───────────────────────────────────────────────
+function LegendFigure() {
+  const father: Person = { id: 'p', name: 'Le père', g: 'M', x: 50, y: 60 };
+  const mother: Person = { id: 'm', name: 'La mère', g: 'F', x: 280, y: 60 };
+  const child: Person = { id: 'c', name: 'L’enfant', g: 'F', x: 50, y: 250 };
+  const note = { fontSize: 14, fill: '#6b5942' };
 
+  return (
+    <div className="lp-panel lp-figure">
+      <svg viewBox="0 0 480 360" role="img" aria-label="Le code couleur : cadre bleu pour un homme, cadre rose pour une femme, trait rose continu entre époux, pointillé orange du parent vers l'enfant">
+        <path d={`M${father.x + CARD_W} ${father.y + CARD_H / 2}H${mother.x}`} stroke={SPOUSE} strokeWidth="3" />
+        <path
+          className="lp-flow"
+          d={`M${father.x + CARD_W / 2} ${father.y + CARD_H}V${child.y}`}
+          stroke={CHILD} strokeWidth="3" strokeDasharray="6 6" fill="none"
+        />
+        <PersonCard p={father} />
+        <PersonCard p={mother} />
+        <PersonCard p={child} />
+        <text x={father.x} y={father.y - 14} {...note}>Cadre bleu : un homme</text>
+        <text x={mother.x} y={mother.y - 14} {...note}>Cadre rose : une femme</text>
+        <text x={240} y={mother.y + CARD_H + 30} textAnchor="middle" {...note}>Trait rose : mari et femme</text>
+        <text x={father.x + CARD_W / 2 + 16} y={196} {...note}>Pointillé orange : parent → enfant</text>
+      </svg>
+    </div>
+  );
+}
+
+// ─── Contenu ──────────────────────────────────────────────────────────────────
 const steps = [
   { title: 'Créez votre compte', desc: 'Inscription gratuite en 30 secondes. Aucune carte bancaire requise.' },
   { title: 'Ajoutez vos membres', desc: 'Commencez par vous-même, puis ajoutez parents, enfants et conjoints avec leurs photos.' },
   { title: 'Partagez avec la famille', desc: 'Invitez vos proches par email ou par lien, et construisez l’arbre ensemble.' },
 ];
 
-const quotes = [
-  { quote: 'Geneo a transformé nos réunions familiales. Maintenant tout le monde peut voir et contribuer à notre histoire.', author: 'Aminata Diallo', origin: 'Dakar, Sénégal', flag: '🇸🇳' },
-  { quote: 'J’ai documenté quatre générations de notre famille en moins d’une semaine. L’interface est intuitive et belle.', author: 'Kofi Mensah', origin: 'Accra, Ghana', flag: '🇬🇭' },
-  { quote: 'Le partage par lien change tout. Mes oncles au village peuvent voir l’arbre sans créer de compte.', author: 'Fatoumata Camara', origin: 'Conakry, Guinée', flag: '🇬🇳' },
-];
-
 export default function LandingPage() {
-  const ref = useReveal();
-
   return (
-    <div ref={ref} className={`lp ${display.variable}`} style={pageVars}>
-      {/* Sans JavaScript, tout reste visible */}
-      <noscript>
-        <style>{`.lp [data-reveal]{opacity:1;transform:none}`}</style>
-      </noscript>
-
+    <div className={`lp ${display.variable}`} style={pageVars}>
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
       <header className="lp-nav">
         <div className="lp-container lp-nav-inner">
@@ -248,149 +185,136 @@ export default function LandingPage() {
           </nav>
           <div className="lp-nav-actions">
             <Link href="/login" className="lp-nav-link">Connexion</Link>
-            <Link href="/register" className="lp-btn lp-btn-primary lp-btn-sm">Commencer</Link>
+            <Link href="/register" className="lp-btn lp-btn-sm">Commencer</Link>
           </div>
         </div>
-        <div className="lp-kente" aria-hidden />
       </header>
 
       <main>
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="lp-hero">
-          <div className="lp-container">
-            <div className="lp-hero-copy">
-              <p className="lp-pill lp-enter">
-                <b>Nouveau</b> Des fonds en tissus africains pour votre arbre
-              </p>
-              <h1 className="lp-display lp-h1 lp-enter" style={delay(60)}>
+          <div className="lp-container lp-hero-grid">
+            <div>
+              <h1 className="lp-display lp-h1">
                 Donnez vie à votre <em>histoire familiale</em>.
               </h1>
-              <p className="lp-lead lp-enter" style={delay(140)}>
+              <p className="lp-lead">
                 Construisez, visualisez et partagez votre arbre généalogique. Simple pour les
                 aînés, vivant pour les plus jeunes, privé pour toute la famille.
               </p>
-              <div className="lp-hero-actions lp-enter" style={delay(220)}>
-                <Link href="/register" className="lp-btn lp-btn-primary lp-btn-lg">
-                  Créer mon arbre gratuitement <ArrowRight size={18} />
+              <div className="lp-hero-actions">
+                <Link href="/register" className="lp-btn">
+                  Créer mon arbre gratuitement <ArrowRight size={17} />
                 </Link>
-                <a href="#etapes" className="lp-btn lp-btn-ghost lp-btn-lg">Comment ça marche</a>
+                <a href="#etapes" className="lp-link">Comment ça marche</a>
               </div>
-              <p className="lp-hero-note lp-enter" style={delay(220)}>
-                Gratuit pour démarrer · Aucune carte bancaire
-              </p>
+              <dl className="lp-facts">
+                {[['2 400+', 'familles actives'], ['18 000+', 'membres documentés'], ['12', 'pays']].map(([n, label]) => (
+                  <div key={label}>
+                    <dt className="lp-display">{n}</dt>
+                    <dd>{label}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
-            <DemoTree />
+            <HeroTree />
           </div>
         </section>
 
-        {/* ── Chiffres ─────────────────────────────────────────────────────── */}
-        <section className="lp-dark lp-stats" aria-label="Geneo en chiffres">
-          <div className="lp-container lp-stats-grid">
-            {stats.map(({ n, suffix, label }, i) => (
-              <div key={label} className="lp-stat" data-reveal style={delay(i * 70)}>
-                <div className="lp-display lp-stat-n">
-                  <Counter target={n} suffix={suffix} />
-                </div>
-                <div className="lp-stat-l">{label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* ── Bandeau d'illustration ───────────────────────────────────────── */}
+        <div className="lp-band" aria-hidden>
+          <Image src="/back-1.jpg" alt="" fill sizes="100vw" className="lp-multiply" priority />
+        </div>
 
         {/* ── Fonctionnalités ──────────────────────────────────────────────── */}
         <section id="fonctionnalites" className="lp-section">
           <div className="lp-container">
-            <div className="lp-head" data-reveal>
-              <span className="lp-eyebrow">Fonctionnalités</span>
+            <div className="lp-head">
               <h2 className="lp-display lp-h2">Tout pour documenter votre héritage.</h2>
               <p className="lp-lead">
                 Un espace de travail pensé pour la famille entière, des grands-parents aux petits-enfants.
               </p>
             </div>
 
-            <div className="lp-bento">
-              <article className="lp-card lp-dark lp-wide" data-reveal>
-                <span className="lp-icon"><TreeDeciduous size={22} /></span>
-                <h3 className="lp-display lp-h3">Un arbre qui se manipule du bout des doigts</h3>
-                <p className="lp-body">
-                  Déplacez les membres par glisser-déposer, repliez une branche pour gagner de
-                  la place : toute la descendance suit le mouvement.
-                </p>
-                <div className="lp-tags">
-                  {['Glisser-déposer', 'Branches repliables', 'Zoom libre', 'Notes et anecdotes'].map((t) => (
-                    <span key={t}>{t}</span>
+            <div className="lp-rows">
+              <div className="lp-row">
+                <div className="lp-row-media lp-mosaic">
+                  {FABRICS.map((p) => (
+                    <figure key={p.id}>
+                      <i style={{ backgroundImage: p.image ?? undefined }} />
+                      <figcaption>{p.name}<span>{p.origin}</span></figcaption>
+                    </figure>
                   ))}
                 </div>
-              </article>
-
-              <article className="lp-card" data-reveal style={delay(80)}>
-                <span className="lp-icon"><Palette size={22} /></span>
-                <h3 className="lp-display lp-h3">Des tissus qui nous ressemblent</h3>
-                <p className="lp-body">Ndop, Toghu, Bogolan, Kente, Wax, Kuba : choisissez le fond de votre arbre.</p>
-                <div className="lp-swatches" aria-hidden>
-                  {FABRICS.slice(0, 4).map((p) => (
-                    <i key={p.id} style={{ backgroundImage: p.image ?? undefined }} />
-                  ))}
+                <div className="lp-row-text">
+                  <h3 className="lp-display lp-h3">Des tissus qui nous ressemblent.</h3>
+                  <p className="lp-lead">
+                    Votre arbre se pose sur un pagne : Ndop, Toghu, Bogolan, Kente, Wax ou Kuba.
+                    Chacun choisit le fond qui lui parle et règle son intensité.
+                  </p>
                 </div>
-              </article>
+              </div>
 
-              <article className="lp-card" data-reveal>
-                <span className="lp-icon"><BookOpenText size={22} /></span>
-                <h3 className="lp-display lp-h3">Une légende claire pour nos aînés</h3>
-                <p className="lp-body">Chaque couleur a un sens, expliqué directement sur l’arbre.</p>
-                <ul className="lp-legend">
-                  <li><i style={{ borderColor: MALE }} /> Homme</li>
-                  <li><i style={{ borderColor: FEMALE }} /> Femme</li>
-                  <li><i className="line" style={{ borderColor: '#ec4899' }} /> Mari et femme</li>
-                  <li><i className="line dash" style={{ borderColor: '#f97316' }} /> Parent → enfant</li>
-                </ul>
-              </article>
+              <div className="lp-row">
+                <div className="lp-row-media"><LegendFigure /></div>
+                <div className="lp-row-text">
+                  <h3 className="lp-display lp-h3">Une légende claire pour nos aînés.</h3>
+                  <p className="lp-lead">
+                    Chaque couleur a un sens, et il est expliqué directement sur l’arbre, en grand.
+                    Nos papas s’y retrouvent sans rien demander.
+                  </p>
+                </div>
+              </div>
 
-              <article className="lp-card" data-reveal style={delay(80)}>
-                <span className="lp-icon"><Users size={22} /></span>
-                <h3 className="lp-display lp-h3">Collaboration familiale</h3>
-                <p className="lp-body">
-                  Invitez vos proches comme éditeurs ou visiteurs. Chacun voit les changements en temps réel.
-                </p>
-              </article>
-
-              <article className="lp-card" data-reveal style={delay(160)}>
-                <span className="lp-icon"><Share2 size={22} /></span>
-                <h3 className="lp-display lp-h3">Partage par simple lien</h3>
-                <p className="lp-body">
-                  Un lien suffit : vos proches consultent l’arbre sans avoir à créer de compte.
-                </p>
-              </article>
-
-              <article className="lp-card" data-reveal>
-                <span className="lp-icon"><Images size={22} /></span>
-                <h3 className="lp-display lp-h3">Photos et portraits</h3>
-                <p className="lp-body">Ajoutez un visage à chaque nom. L’arbre devient l’album vivant de la famille.</p>
-              </article>
-
-              <article className="lp-card lp-wide" data-reveal style={delay(80)}>
-                <span className="lp-icon"><ShieldCheck size={22} /></span>
-                <h3 className="lp-display lp-h3">Privé par défaut</h3>
-                <p className="lp-body">
-                  Vous décidez qui peut voir ou modifier votre arbre. L’histoire de votre famille reste entre vos mains.
-                </p>
-              </article>
+              <div className="lp-row">
+                <div className="lp-row-media lp-panel lp-figure">
+                  <Image src="/back.jpg" alt="" fill sizes="(max-width: 56rem) 100vw, 50vw" className="lp-multiply" />
+                </div>
+                <div className="lp-row-text">
+                  <h3 className="lp-display lp-h3">Toute la famille, sur le même arbre.</h3>
+                  <p className="lp-lead">
+                    Invitez vos proches et construisez ensemble, chacun voit les changements en direct.
+                  </p>
+                  <ul className="lp-list">
+                    <li>Éditeurs ou simples visiteurs, c’est vous qui décidez</li>
+                    <li>Un lien suffit, sans compte à créer pour consulter</li>
+                    <li>Glisser-déposer, branches repliables, zoom libre</li>
+                  </ul>
+                </div>
+              </div>
             </div>
+
+            <ul className="lp-more">
+              <li>
+                <Images size={22} />
+                <h4 className="lp-display lp-h4">Photos et portraits</h4>
+                <p className="lp-body">Un visage sur chaque nom. L’arbre devient l’album vivant de la famille.</p>
+              </li>
+              <li>
+                <NotebookPen size={22} />
+                <h4 className="lp-display lp-h4">Notes et anecdotes</h4>
+                <p className="lp-body">Gardez les histoires que l’on raconte, à côté de ceux qui les ont vécues.</p>
+              </li>
+              <li>
+                <ShieldCheck size={22} />
+                <h4 className="lp-display lp-h4">Privé par défaut</h4>
+                <p className="lp-body">Vous décidez qui peut voir ou modifier votre arbre.</p>
+              </li>
+            </ul>
           </div>
         </section>
 
         {/* ── Étapes ───────────────────────────────────────────────────────── */}
-        <section id="etapes" className="lp-section lp-sand">
+        <section id="etapes" className="lp-section lp-tinted">
           <div className="lp-container">
-            <div className="lp-head" data-reveal>
-              <span className="lp-eyebrow">Comment ça marche</span>
+            <div className="lp-head">
               <h2 className="lp-display lp-h2">Votre arbre en trois étapes.</h2>
             </div>
             <ol className="lp-steps">
               {steps.map(({ title, desc }, i) => (
-                <li key={title} className="lp-step" data-reveal style={delay(i * 90)}>
+                <li key={title} className="lp-step">
                   <div className="lp-display lp-step-n">{i + 1}</div>
-                  <h3 className="lp-display lp-h3">{title}</h3>
+                  <h3 className="lp-display lp-h4">{title}</h3>
                   <p className="lp-body">{desc}</p>
                 </li>
               ))}
@@ -400,40 +324,46 @@ export default function LandingPage() {
 
         {/* ── Témoignages ──────────────────────────────────────────────────── */}
         <section id="temoignages" className="lp-section">
-          <div className="lp-container">
-            <div className="lp-head" data-reveal>
-              <span className="lp-eyebrow">Témoignages</span>
-              <h2 className="lp-display lp-h2">Ce que disent nos familles.</h2>
-            </div>
-            <div className="lp-quotes">
-              {quotes.map(({ quote, author, origin, flag }, i) => (
-                <figure key={author} className="lp-card lp-quote" data-reveal style={delay(i * 80)}>
-                  <blockquote>« {quote} »</blockquote>
-                  <footer>
-                    <span className="lp-avatar" aria-hidden>{flag}</span>
-                    <figcaption>
-                      <cite>{author}</cite>
-                      <small>{origin}</small>
-                    </figcaption>
-                  </footer>
-                </figure>
-              ))}
+          <div className="lp-container lp-quotes">
+            <figure className="lp-quote-big">
+              <blockquote className="lp-display">
+                « Geneo a transformé nos réunions familiales. Maintenant tout le monde peut voir
+                et contribuer à <em>notre histoire</em>. »
+              </blockquote>
+              <figcaption>Aminata Diallo <span>· Dakar, Sénégal</span></figcaption>
+            </figure>
+            <div>
+              <figure className="lp-quote-small">
+                <blockquote>
+                  « J’ai documenté quatre générations de notre famille en moins d’une semaine. »
+                </blockquote>
+                <figcaption>Kofi Mensah <span>· Accra, Ghana</span></figcaption>
+              </figure>
+              <figure className="lp-quote-small">
+                <blockquote>
+                  « Mes oncles au village peuvent voir l’arbre sans créer de compte. »
+                </blockquote>
+                <figcaption>Fatoumata Camara <span>· Conakry, Guinée</span></figcaption>
+              </figure>
             </div>
           </div>
         </section>
 
         {/* ── Appel final ──────────────────────────────────────────────────── */}
         <div className="lp-container">
-          <section className="lp-dark lp-cta" data-reveal>
-            <h2 className="lp-display lp-h2">
-              Prêt à explorer <em>vos racines</em> ?
-            </h2>
-            <p className="lp-lead">
-              Commencez aujourd’hui, invitez la famille demain. C’est gratuit pour démarrer.
-            </p>
-            <Link href="/register" className="lp-btn lp-btn-primary lp-btn-lg">
-              Créer mon arbre gratuitement <ArrowRight size={18} />
-            </Link>
+          <section className="lp-cta">
+            <div className="lp-cta-text">
+              <h2 className="lp-display lp-h2">
+                Prêt à explorer <em>vos racines</em> ?
+              </h2>
+              <p>Commencez aujourd’hui, invitez la famille demain. C’est gratuit pour démarrer.</p>
+              <Link href="/register" className="lp-btn lp-btn-light">
+                Créer mon arbre gratuitement <ArrowRight size={17} />
+              </Link>
+            </div>
+            <div className="lp-cta-media" aria-hidden>
+              <Image src="/back-1.jpg" alt="" fill sizes="(max-width: 56rem) 100vw, 40vw" />
+            </div>
           </section>
         </div>
       </main>
@@ -443,10 +373,7 @@ export default function LandingPage() {
         <div className="lp-kente" aria-hidden />
         <div className="lp-container">
           <div className="lp-footer-inner">
-            <div>
-              <div className="lp-display lp-footer-brand">Geneo<em>.io</em></div>
-              <p>Enraciné dans la famille. Documentez votre héritage pour les générations futures.</p>
-            </div>
+            <div className="lp-display lp-footer-brand">Geneo<em>.io</em></div>
             <nav aria-label="Pied de page">
               <a href="#fonctionnalites">Fonctionnalités</a>
               <a href="#etapes">Comment ça marche</a>
@@ -455,7 +382,7 @@ export default function LandingPage() {
               <Link href="/register">Créer un compte</Link>
             </nav>
           </div>
-          <div className="lp-footer-bottom">© 2026 Geneo. Tous droits réservés.</div>
+          <small>© 2026 Geneo. Tous droits réservés.</small>
         </div>
       </footer>
     </div>
