@@ -7,6 +7,33 @@ import { Fraunces } from 'next/font/google';
 import { ArrowRight, Images, NotebookPen, ShieldCheck } from 'lucide-react';
 import { getTreeBackground, TREE_BACKGROUNDS } from '@/lib/treeBackgrounds';
 import './landing.css';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
+
+// Données structurées pour Google (schema.org)
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: `${SITE_URL}/`,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      inLanguage: 'fr',
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: SITE_NAME,
+      url: `${SITE_URL}/`,
+      description: SITE_DESCRIPTION,
+      applicationCategory: 'LifestyleApplication',
+      operatingSystem: 'Web',
+      inLanguage: 'fr',
+      image: `${SITE_URL}/opengraph.png`,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'XAF' },
+    },
+  ],
+};
 
 // Titres : Fraunces (serif à taille optique). Texte courant : Geist, déjà chargée par le layout.
 const display = Fraunces({
@@ -172,6 +199,11 @@ const steps = [
 export default function LandingPage() {
   return (
     <div className={`lp ${display.variable}`} style={pageVars}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
+
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
       <header className="lp-nav">
         <div className="lp-container lp-nav-inner">
