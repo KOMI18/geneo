@@ -17,10 +17,8 @@ const svg = (size: number, body: string) =>
   )}")`;
 
 // ─── Ndop (Grassfields, Cameroun) : indigo, motifs blancs en réserve ──────────
-const ndop = svg(
-  160,
-  `<rect width="160" height="160" fill="#1b2a6b"/>
-  <g fill="none" stroke="#f4f1e8" stroke-linecap="round">
+const ndopMotif = (ink: string) =>
+  `  <g fill="none" stroke="${ink}" stroke-linecap="round">
     <path d="M0 0H160M0 80H160M0 160H160M0 0V160M80 0V160M160 0V160" stroke-width="3" stroke-dasharray="3 5"/>
     <g stroke-width="3" stroke-dasharray="1 6">
       <circle cx="40" cy="40" r="27"/><circle cx="40" cy="40" r="17"/>
@@ -32,11 +30,11 @@ const ndop = svg(
       <path d="M96 16l8 8M144 16l-8 8M96 64l8-8M144 64l-8-8M16 96l8 8M64 96l-8 8M16 144l8-8M64 144l-8-8"/>
     </g>
   </g>
-  <g fill="#f4f1e8">
+  <g fill="${ink}">
     <circle cx="40" cy="40" r="6"/><circle cx="120" cy="120" r="6"/>
     <circle cx="120" cy="40" r="4"/><circle cx="40" cy="120" r="4"/>
-  </g>`
-);
+  </g>`;
+const ndop = svg(160, `<rect width="160" height="160" fill="#1b2a6b"/>${ndopMotif('#f4f1e8')}`);
 
 // ─── Toghu (Nord-Ouest, Cameroun) : velours noir brodé rouge, jaune, blanc ────
 const toghuStar = (cx: number, cy: number) =>
@@ -60,10 +58,8 @@ const toghu = svg(
 );
 
 // ─── Bogolan (Mali) : terre brune, signes crème ───────────────────────────────
-const bogolan = svg(
-  120,
-  `<rect width="120" height="120" fill="#2e1f14"/>
-  <g fill="none" stroke="#ead9b5" stroke-linecap="square">
+const bogolanMotif = (ink: string) =>
+  `  <g fill="none" stroke="${ink}" stroke-linecap="square">
     <path d="M0 30L10 10L20 30L30 10L40 30L50 10L60 30L70 10L80 30L90 10L100 30L110 10L120 30" stroke-width="4" stroke-linejoin="miter"/>
     <path d="M0 40H120M0 80H120" stroke-width="3"/>
     <path d="M0 0H120M0 120H120" stroke-width="6"/>
@@ -71,11 +67,11 @@ const bogolan = svg(
     <circle cx="45" cy="60" r="7" stroke-width="4"/><circle cx="105" cy="60" r="7" stroke-width="4"/>
     <path d="M45 91l9 9-9 9-9-9zM105 91l9 9-9 9-9-9z" stroke-width="3"/>
   </g>
-  <g fill="#ead9b5">
+  <g fill="${ink}">
     <path d="M15 91l9 9-9 9-9-9zM75 91l9 9-9 9-9-9z"/>
     <circle cx="45" cy="60" r="2"/><circle cx="105" cy="60" r="2"/>
-  </g>`
-);
+  </g>`;
+const bogolan = svg(120, `<rect width="120" height="120" fill="#2e1f14"/>${bogolanMotif('#ead9b5')}`);
 
 // ─── Kente (Ghana) : bandes tissées or, vert, rouge, noir ─────────────────────
 const kenteWarp = (x: number, y: number) =>
@@ -112,18 +108,16 @@ const wax = svg(
 );
 
 // ─── Kuba (RD Congo) : raphia, losanges emboîtés noirs ────────────────────────
-const kuba = svg(
-  80,
-  `<rect width="80" height="80" fill="#d9b77e"/>
-  <g fill="none" stroke="#1f1710" stroke-linejoin="miter">
+const kubaMotif = (ink: string) =>
+  `  <g fill="none" stroke="${ink}" stroke-linejoin="miter">
     <path d="M40 2L78 40L40 78L2 40Z" stroke-width="6"/>
     <path d="M40 20L60 40L40 60L20 40Z" stroke-width="4"/>
   </g>
-  <g fill="#1f1710">
+  <g fill="${ink}">
     <path d="M40 32l8 8-8 8-8-8z"/>
     <path d="M0-12L12 0L0 12L-12 0zM80-12L92 0L80 12L68 0zM0 68L12 80L0 92L-12 80zM80 68L92 80L80 92L68 80z"/>
-  </g>`
-);
+  </g>`;
+const kuba = svg(80, `<rect width="80" height="80" fill="#d9b77e"/>${kubaMotif('#1f1710')}`);
 
 export const TREE_BACKGROUNDS: TreeBackgroundPattern[] = [
   { id: 'ndop', name: 'Ndop', origin: 'Cameroun', tile: 160, image: ndop },
@@ -140,3 +134,14 @@ export const DEFAULT_TREE_BACKGROUND_INTENSITY = 0.45;
 
 export const getTreeBackground = (id: string): TreeBackgroundPattern =>
   TREE_BACKGROUNDS.find((p) => p.id === id) ?? TREE_BACKGROUNDS[0];
+
+// ─── Motifs seuls (fond transparent), pour habiller d'autres pages ────────────
+const MOTIFS = {
+  ndop: { tile: 160, draw: ndopMotif },
+  bogolan: { tile: 120, draw: bogolanMotif },
+  kuba: { tile: 80, draw: kubaMotif },
+} as const;
+
+/** Motif d'un tissu dans une seule couleur, sur fond transparent (URL CSS). */
+export const fabricMotif = (id: keyof typeof MOTIFS, ink: string, opacity = 1) =>
+  svg(MOTIFS[id].tile, `<g opacity="${opacity}">${MOTIFS[id].draw(ink)}</g>`);

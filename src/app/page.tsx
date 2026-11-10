@@ -16,6 +16,13 @@ import {
   useEdgesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { fabricMotif, getTreeBackground } from '@/lib/treeBackgrounds';
+
+// Tissus africains repris de l'espace de travail, aux couleurs de la page
+const FABRIC_PAGE = fabricMotif('ndop', '#c47820', 0.1);      // fond général, très discret
+const FABRIC_DARK = fabricMotif('bogolan', '#fffaf4', 0.1);   // sections brunes
+const FABRIC_SAND = fabricMotif('kuba', '#c47820', 0.08);     // section sable
+const FABRIC_KENTE = getTreeBackground('kente').image;        // liseré tissé
 
 const demoNodes: Node[] = [
   {
@@ -113,7 +120,12 @@ const LandingPage: NextPage = () => {
           --gold: #ffb86a;
         }
         html { scroll-behavior: smooth; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); overflow-x: hidden; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--cream) ${FABRIC_PAGE} 0 0 / 200px 200px; color: var(--ink); overflow-x: hidden; }
+
+        /* Tissus : halo crème derrière le texte du hero, liseré kente, sections habillées */
+        .hero-wrap { background: radial-gradient(ellipse 60% 75% at 24% 45%, var(--cream) 30%, rgba(255,250,244,0) 100%); }
+        .kente-strip { height: 8px; background: ${FABRIC_KENTE} 0 0 / 48px 48px; }
+        .nav .kente-strip { margin: 0 -5vw; }
         .display { font-family: 'Playfair Display', serif; }
 
         @keyframes fadeUp {
@@ -130,7 +142,7 @@ const LandingPage: NextPage = () => {
         .delay-3 { animation-delay: 0.4s; opacity: 0; }
         .float-anim { animation: float 4s ease-in-out infinite; }
 
-        .nav { position: sticky; top: 0; z-index: 100; background: rgba(255,250,244,0.94); backdrop-filter: blur(12px); border-bottom: 1px solid var(--cream-dark); padding: 0 5vw; }
+        .nav { position: sticky; top: 0; z-index: 100; background: rgba(255,250,244,0.94); backdrop-filter: blur(12px); padding: 0 5vw; }
         .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 68px; }
         .nav-logo { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; color: var(--primary-dark); text-decoration: none; }
         .nav-logo em { color: var(--primary); font-style: italic; }
@@ -171,7 +183,7 @@ const LandingPage: NextPage = () => {
         .hero-blob { position: absolute; top: -40px; right: -40px; width: 280px; height: 280px; background: var(--cream-dark); border-radius: 50%; z-index: 0; }
         .hero-badge { position: absolute; bottom: -18px; left: -18px; background: white; border-radius: 16px; padding: 13px 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); display: flex; align-items: center; gap: 12px; z-index: 2; }
 
-        .stats-band { background: var(--primary-dark); padding: 56px 5vw; margin: 40px 0; }
+        .stats-band { background: var(--primary-dark) ${FABRIC_DARK} 0 0 / 120px 120px; padding: 56px 5vw; margin: 40px 0; }
         .stats-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
 
         .features-section { max-width: 1200px; margin: 0 auto; padding: 80px 5vw; }
@@ -179,10 +191,10 @@ const LandingPage: NextPage = () => {
         .features-grid-bottom { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .feature-card { background: white; border: 1px solid var(--cream-dark); border-radius: 20px; padding: 32px 28px; transition: all 0.3s; }
         .feature-card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(255,184,106,0.15); border-color: var(--primary); }
-        .feature-card-dark { background: var(--primary-dark); color: white; position: relative; overflow: hidden; }
+        .feature-card-dark { background: var(--primary-dark) ${FABRIC_DARK} 0 0 / 120px 120px; color: white; position: relative; overflow: hidden; }
         .icon-wrap { width: 50px; height: 50px; border-radius: 14px; background: var(--cream-dark); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; color: var(--primary-dark); }
 
-        .how-section { background: var(--cream-dark); padding: 80px 5vw; }
+        .how-section { background: var(--cream-dark) ${FABRIC_SAND} 0 0 / 80px 80px; padding: 80px 5vw; }
         .how-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
         .step { display: flex; gap: 22px; align-items: flex-start; }
         .step-num { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 20px; color: var(--primary-dark); flex-shrink: 0; }
@@ -191,7 +203,7 @@ const LandingPage: NextPage = () => {
         .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .testimonial { background: white; border-radius: 20px; padding: 28px; border: 1px solid var(--cream-dark); }
 
-        .cta-section { margin: 0 4vw 72px; border-radius: 28px; background: var(--primary-dark); padding: 72px 5vw; text-align: center; position: relative; overflow: hidden; }
+        .cta-section { margin: 0 4vw 72px; border-radius: 28px; background: var(--primary-dark) ${FABRIC_DARK} 0 0 / 120px 120px; padding: 72px 5vw; text-align: center; position: relative; overflow: hidden; }
 
         .footer { background: var(--ink); padding: 56px 5vw 36px; }
         .footer-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 56px; margin-bottom: 44px; }
@@ -213,7 +225,7 @@ const LandingPage: NextPage = () => {
 
           .mobile-menu {
             display: block;
-            position: fixed; top: 68px; left: 0; right: 0; bottom: 0;
+            position: fixed; top: 76px; left: 0; right: 0; bottom: 0;
             background: var(--cream);
             z-index: 99;
             padding: 36px 6vw;
@@ -283,6 +295,7 @@ const LandingPage: NextPage = () => {
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
+        <div className="kente-strip" aria-hidden />
       </nav>
 
       {/* Mobile menu */}
@@ -301,6 +314,7 @@ const LandingPage: NextPage = () => {
       </div>
 
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
+      <div className="hero-wrap">
       <section className="hero">
         <div>
           {/* <div className="tag delay-1 fade-up">Arbre généalogique collaboratif</div> */}
@@ -351,6 +365,7 @@ const LandingPage: NextPage = () => {
           </div>
         </div>
       </section>
+      </div>
 
       {/* ── STATS BAND ───────────────────────────────────────────────────────── */}
       <section className="stats-band">
@@ -533,6 +548,7 @@ const LandingPage: NextPage = () => {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────────────────────── */}
+      <div className="kente-strip" aria-hidden />
       <footer className="footer">
         <div className="footer-grid">
           <div>
