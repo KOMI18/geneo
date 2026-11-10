@@ -3,7 +3,6 @@ import { memo } from 'react';
 import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import {  Trash2, Edit2, MessageCircle,  } from 'lucide-react';
 import { useTreeStore } from '@/store/useTreeStore';
-import { MemberNoteModal } from './MemberNoteModal';
 
 // 1. On définit l'interface de ce que contient "data"
 export type FamilyNodeData = {
@@ -14,25 +13,21 @@ export type FamilyNodeData = {
   canEdit: boolean;  
   onZoom: (url: string, name: string) => void;
   onAddSpouse: (id: string) => void;
-  onSaveCollapse?: (id: string) => void; 
+  onToggleCollapse?: (id: string) => void;
 };
 // 2. On applique le type à NodeProps
 export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) => {
   const openModal = useTreeStore((state) => state.openModal);
   const openDeleteModal = useTreeStore(s => s.openDeleteModal);
   const openEditModal = useTreeStore(s => s.openEditModal);
-  const members = useTreeStore(s => s.members);
-  const collapsedIds = useTreeStore(s => s.collapsedIds);
-  const toggleCollapse = useTreeStore(s => s.toggleCollapse);
-  const edges = useTreeStore(s => s.edges);
-  const openNoteModal = useTreeStore(s => s.openNoteModal); // Récupère la fonction
-  
-  const currentMember = members.find(m => m.id === id);
-  const hasNote = !!currentMember?.note;
-  const hasChildren = edges.some(
-  e => e.source === id && e.type === 'child'
-);
-  const isCollapsed = collapsedIds.has(id);
+  const openNoteModal = useTreeStore(s => s.openNoteModal);
+
+  // Sélecteurs ciblés : la carte ne se re-rend que si SA note, SES enfants ou SON repli changent
+  const hasNote = useTreeStore(s => !!s.members.find(m => m.id === id)?.note);
+  const hasChildren = useTreeStore(s => s.edges.some(e => e.source === id && e.type === 'child'));
+  const isCollapsed = useTreeStore(s => s.collapsedIds.has(id));
+  const getMember = () => useTreeStore.getState().members.find(m => m.id === id);
+
   const genderClass = data.gender === 'M' 
     ? 'border-blue-400 dark:border-blue-500' 
     : 'border-pink-400 dark:border-pink-500';
@@ -58,7 +53,8 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
        <div 
           onClick={(e) => {
             e.stopPropagation();
-            if (currentMember) openNoteModal(currentMember);
+            const member = getMember();
+            if (member) openNoteModal(member);
           }}
           className={`absolute cursor-pointer top-3 right-3 p-1 rounded-full transition-colors 
             ${hasNote ? 'text-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'text-zinc-300 hover:text-zinc-500'}`}
@@ -73,15 +69,14 @@ export const FamilyNode = memo(({ id, data }: NodeProps<Node<FamilyNodeData>>) =
         <div className="flex gap-1">
           <button onClick={() => openDeleteModal(id)} className="p-1 cursor-pointer text-red-500 hover:bg-red-50 rounded"><Trash2 size={14} /></button>
           <button onClick={() => {
-              const member = members.find(m => m.id === id);
+              const member = getMember();
               if (member) openEditModal(member);
             }} className="p-1 text-zinc-500 cursor-pointer hover:bg-zinc-100 rounded"><Edit2 size={14} /></button>
             {hasChildren && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleCollapse(id);
-                  data.onSaveCollapse?.(id); // callback vers page.tsx
+                  data.onToggleCollapse?.(id); // replie/déplie + sauvegarde (page.tsx)
                 }}
                 className={`text-[10px] px-2 py-1 rounded transition-colors ${
                   isCollapsed

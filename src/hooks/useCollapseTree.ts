@@ -1,74 +1,65 @@
 import { useMemo } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { useTreeStore } from '@/store/useTreeStore';
+import { buildFamilyIndex } from '@/lib/treeGraph';
+
+const BUBBLE_SIZE = 48;
+const DEFAULT_NODE_WIDTH = 180;
 
 export function useCollapseTree(nodes: Node[], edges: Edge[]) {
-  const { collapsedIds } = useTreeStore();
+  const collapsedIds = useTreeStore((s) => s.collapsedIds);
+
+  // L'index ne dépend que des liens : il n'est pas recalculé pendant un déplacement.
+  const family = useMemo(
+    () =>
+      buildFamilyIndex(
+        edges.map((e) => ({
+          source: e.source,
+          target: e.target,
+          type: (e.data as { type?: string } | undefined)?.type,
+        }))
+      ),
+    [edges]
+  );
 
   return useMemo(() => {
     if (collapsedIds.size === 0) return { nodes, edges };
 
-    // Trouve tous les descendants d'un node (enfants + époux)
-    const getDescendants = (id: string, visited = new Set<string>()): string[] => {
-      if (visited.has(id)) return [];
-      visited.add(id);
-
-      const children = edges
-        .filter(e => e.source === id && (e.data as any)?.type === 'child')
-        .map(e => e.target);
-
-      const spouses = edges
-        .filter(e =>
-          (e.data as any)?.type === 'spouse' &&
-          (e.source === id || e.target === id)
-        )
-        .map(e => e.source === id ? e.target : e.source);
-
-      return [
-        ...children,
-        ...spouses,
-        ...children.flatMap(c => getDescendants(c, visited)),
-      ];
-    };
-
+    const nodeById = new Map(nodes.map((n) => [n.id, n]));
     const hiddenIds = new Set<string>();
     const bubbleNodes: Node[] = [];
     const bubbleEdges: Edge[] = [];
 
-    collapsedIds.forEach(parentId => {
-      const parentNode = nodes.find(n => n.id === parentId);
+    collapsedIds.forEach((parentId) => {
+      const parentNode = nodeById.get(parentId);
       if (!parentNode) return;
 
-      const descendants = getDescendants(parentId);
-      descendants.forEach(id => hiddenIds.add(id));
+      const descendants = family.getDescendants(parentId);
+      descendants.forEach((id) => hiddenIds.add(id));
 
-      // Créer le node bubble sous le parent
+      // On compte les descendants, pas les époux directs du parent
+      const parentSpouses = new Set(family.getSpouses(parentId));
+      const parentWidth = parentNode.measured?.width ?? DEFAULT_NODE_WIDTH;
+
+      // Bulle centrée sous le parent : elle suit donc le parent quand on le déplace
       const bubbleId = `bubble-${parentId}`;
       bubbleNodes.push({
         id: bubbleId,
         type: 'collapsedBubble',
         position: {
-          x: parentNode.position.x + 60, // centré sous le parent
+          x: parentNode.position.x + (parentWidth - BUBBLE_SIZE) / 2,
           y: parentNode.position.y + 120,
         },
         data: {
-          count: descendants.filter(id => {
-            // Compter uniquement les membres, pas les époux directs
-            const isSpouseOfParent = edges.some(e =>
-              (e.data as any)?.type === 'spouse' &&
-              ((e.source === parentId && e.target === id) ||
-               (e.target === parentId && e.source === id))
-            );
-            return !isSpouseOfParent;
-          }).length,
+          count: descendants.filter((id) => !parentSpouses.has(id)).length,
           parentId,
-          onExpand: () => {},  // branché dans page.tsx
+          onExpand: () => {}, // branché dans page.tsx
         },
         draggable: false,
         selectable: false,
       });
 
-      // Edge fictif parent → bubble
+      // Edge fictif parent → bulle
       bubbleEdges.push({
         id: `edge-bubble-${parentId}`,
         source: parentId,
@@ -81,19 +72,22 @@ export function useCollapseTree(nodes: Node[], edges: Edge[]) {
       });
     });
 
-    const filteredNodes = [
-      ...nodes.map(n => ({ ...n, hidden: hiddenIds.has(n.id) })),
-      ...bubbleNodes,
-    ];
+    // Un parent replié à l'intérieur d'une branche déjà masquée n'affiche pas sa bulle
+    const visibleBubbles = bubbleNodes.filter(
+      (b) => !hiddenIds.has((b.data as { parentId: string }).parentId)
+    );
+    const visibleBubbleEdges = bubbleEdges.filter((e) => !hiddenIds.has(e.source));
 
-    const filteredEdges = [
-      ...edges.map(e => ({
-        ...e,
-        hidden: hiddenIds.has(e.source) || hiddenIds.has(e.target),
-      })),
-      ...bubbleEdges,
-    ];
+    // On ne recrée un objet que si la visibilité change (évite des re-rendus inutiles)
+    const withHidden = <T extends { hidden?: boolean }>(item: T, hidden: boolean): T =>
+      (item.hidden ?? false) === hidden ? item : { ...item, hidden };
 
-    return { nodes: filteredNodes, edges: filteredEdges };
-  }, [nodes, edges, collapsedIds]);
+    return {
+      nodes: [...nodes.map((n) => withHidden(n, hiddenIds.has(n.id))), ...visibleBubbles],
+      edges: [
+        ...edges.map((e) => withHidden(e, hiddenIds.has(e.source) || hiddenIds.has(e.target))),
+        ...visibleBubbleEdges,
+      ],
+    };
+  }, [nodes, edges, collapsedIds, family]);
 }

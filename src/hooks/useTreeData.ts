@@ -11,7 +11,8 @@ import {
   deleteDoc,
   serverTimestamp,
   increment,
-  getDoc, 
+  getDoc,
+  writeBatch,
   
 } from 'firebase/firestore';
 
@@ -106,9 +107,11 @@ const updateMember = useCallback(async (
 ) => {
   const memberRef = doc(db, 'trees', treeId, 'members', memberId);
   
-  // 1. Récupérer l'ancien état pour le nettoyage R2
-  const memberSnap = await getDoc(memberRef);
-  const oldPhotoURL = memberSnap.data()?.photoURL;
+  // 1. Récupérer l'ancien état pour le nettoyage R2 (lecture utile seulement si la photo change)
+  const photoChanges = !!newPhotoURL || updates.photoURL === null;
+  const oldPhotoURL = photoChanges
+    ? (await getDoc(memberRef)).data()?.photoURL
+    : undefined;
 
   // 2. Gérer le changement de photo
   if (newPhotoURL) {
@@ -177,6 +180,24 @@ const deleteMember = useCallback(async (memberId: string) => {
 
 }, [treeId, edges, members, updateTreeMeta , deletePhoto]);
 
+// ─── Enregistrer des positions après un déplacement : un seul aller-retour ───
+const saveMemberPositions = useCallback(async (
+  positions: Record<string, { x: number; y: number }>
+) => {
+  const ids = Object.keys(positions);
+  if (ids.length === 0) return;
+
+  const CHUNK = 400; // limite Firestore : 500 écritures par lot
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + CHUNK).forEach((id) => {
+      batch.update(doc(db, 'trees', treeId, 'members', id), { position: positions[id] });
+    });
+    if (i === 0) batch.update(doc(db, 'trees', treeId), { updatedAt: Date.now() });
+    await batch.commit();
+  }
+}, [treeId]);
+
 const saveCollapsedIds = useCallback(async (memberId: string) => {
   // On récupère l'état actuel depuis le store pour avoir la version à jour
   const { collapsedIds } = useTreeStore.getState();
@@ -193,6 +214,7 @@ const saveCollapsedIds = useCallback(async (memberId: string) => {
     addEdge,
     updateMember,
     deleteMember,
-    saveCollapsedIds
+    saveCollapsedIds,
+    saveMemberPositions,
   };
 };

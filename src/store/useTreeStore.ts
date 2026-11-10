@@ -77,7 +77,12 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
     next.has(id) ? next.delete(id) : next.add(id);
     return { collapsedIds: next };
   }),
-  setCollapsedIds: (ids) => set({ collapsedIds: new Set(ids) }),
+  setCollapsedIds: (ids) => set((state) => {
+    // Même contenu → même référence : évite de re-rendre tout l'arbre à chaque snapshot
+    const unchanged =
+      ids.length === state.collapsedIds.size && ids.every((id) => state.collapsedIds.has(id));
+    return unchanged ? state : { collapsedIds: new Set(ids) };
+  }),
 
   // Logic Notes
   isNoteModalOpen: false,

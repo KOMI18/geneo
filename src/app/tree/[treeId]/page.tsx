@@ -1,10 +1,8 @@
 'use client';
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   ReactFlow,
-  Background,
   Controls,
-  BackgroundVariant,
   applyNodeChanges,
   applyEdgeChanges,
   Node,
@@ -34,8 +32,13 @@ import { DeleteConfirmModal } from '@/components/canvas/DeleteConfirmModal';
 import { useCollapseTree } from '@/hooks/useCollapseTree';
 import { CustomEdge } from '@/components/canvas/CustomEdge';
 import { MemberNoteModal } from '@/components/canvas/MemberNoteModal';
+import { TreeBackground } from '@/components/canvas/TreeBackground';
+import { BackgroundPicker } from '@/components/canvas/BackgroundPicker';
+import { TreeLegend } from '@/components/canvas/TreeLegend';
+import { buildFamilyIndex } from '@/lib/treeGraph';
 
 const edgeTypes = { customEdge: CustomEdge };
+const DEFAULT_POSITION = { x: 400, y: 100 };
 const nodeTypes = {
   familyNode: FamilyNode,
   collapsedBubble: CollapsedBubble,
@@ -68,6 +71,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     deleteMember,
     updateMember,
     saveCollapsedIds,
+    saveMemberPositions,
   } = useTreeData(treeId);
 
   // ─── Store ─────────────────────────────────────────────────────────────────
@@ -77,30 +81,78 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [zoomedImage, setZoomedImage] = useState<{ url: string; name: string } | null>(null);
-  const handleExpand = useCallback((parentId: string) => {
-  useTreeStore.getState().toggleCollapse(parentId);
-  saveCollapsedIds(parentId);
-}, [saveCollapsedIds]);
-  // ─── Sync Firestore → canvas nodes ────────────────────────────────────────
+  const nodesRef = useRef<Node[]>(nodes);
   useEffect(() => {
-    const canvasNodes: Node[] = members.map((member) => ({
-      id: member.id,
-      type: 'familyNode',
-      // On récupère la position sauvegardée ou on place par défaut
-      position: (member as any).position ?? { x: 400, y: 100 },
-      data: {
-        label: member.label,
-        id: member.id,
-        gender: member.gender,
-         canEdit,  
-        photoURL: member.photoURL,
-        onZoom: (url: string, name: string) => setZoomedImage({ url, name }),
-        onAddSpouse: handleAddSpouse,
-      } satisfies FamilyNodeData,
-    }));
-    setNodes(canvasNodes);
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  const handleZoom = useCallback(
+    (url: string, name: string) => setZoomedImage({ url, name }),
+    []
+  );
+
+  const handleAddSpouse = useCallback(
+    (id: string) => openModal(id, true),
+    [openModal]
+  );
+
+  // Replier / déplier une descendance, puis enregistrer l'état dans l'arbre
+  const handleToggleCollapse = useCallback(
+    (parentId: string) => {
+      useTreeStore.getState().toggleCollapse(parentId);
+      // Un lecteur n'a pas le droit d'écrire : le repli reste alors local
+      saveCollapsedIds(parentId).catch(() => {});
+    },
+    [saveCollapsedIds]
+  );
+
+  // ─── Sync Firestore → canvas nodes ────────────────────────────────────────
+  // On réutilise les nodes inchangés : seul le membre modifié est redessiné.
+  useEffect(() => {
+    setNodes((prev) => {
+      const prevById = new Map(prev.map((n) => [n.id, n]));
+      return members.map((member) => {
+        const position = member.position ?? DEFAULT_POSITION;
+        const photoURL = member.photoURL ?? null;
+        const old = prevById.get(member.id);
+
+        if (old) {
+          const d = old.data as FamilyNodeData;
+          // Pendant un déplacement en cours, la position locale fait foi
+          const samePosition =
+            old.dragging || (old.position.x === position.x && old.position.y === position.y);
+          const sameData =
+            d.label === member.label &&
+            d.gender === member.gender &&
+            d.photoURL === photoURL &&
+            d.canEdit === canEdit;
+          if (samePosition && sameData) return old;
+          return {
+            ...old,
+            position: samePosition ? old.position : position,
+            data: sameData ? old.data : { ...d, label: member.label, gender: member.gender, photoURL, canEdit },
+          };
+        }
+
+        return {
+          id: member.id,
+          type: 'familyNode',
+          position,
+          data: {
+            label: member.label,
+            id: member.id,
+            gender: member.gender,
+            canEdit,
+            photoURL,
+            onZoom: handleZoom,
+            onAddSpouse: handleAddSpouse,
+            onToggleCollapse: handleToggleCollapse,
+          } satisfies FamilyNodeData,
+        };
+      });
+    });
     setMembers(members);
-  }, [members , canEdit]);
+  }, [members, canEdit, handleZoom, handleAddSpouse, handleToggleCollapse, setMembers]);
 
   // ─── Sync Firestore → canvas edges ────────────────────────────────────────
   useEffect(() => {
@@ -108,19 +160,11 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
       id: e.id,
       source: e.source,
       target: e.target,
-      sourceHandle: (e as any).sourceHandle ?? 'bottom',
-      targetHandle: (e as any).targetHandle ?? 'top',
+      sourceHandle: e.sourceHandle ?? 'bottom',
+      targetHandle: e.targetHandle ?? 'top',
       type: "customEdge",
       animated: e.type !== 'spouse',
-      data: {
-        type: e.type,
-        onToggleCollapse: async (parentId: string) => {
-          await saveCollapsedIds(parentId);
-        },
-        onSaveCollapse: async (id: string) => {
-          await saveCollapsedIds(id);
-        },
-      },
+      data: { type: e.type },
       style: {
         stroke: e.type === 'spouse' ? '#ec4899' : '#f97316',
         strokeWidth: 3,
@@ -128,17 +172,21 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     }));
     setEdges(canvasEdges);
     setStoreEdges(dbEdges);
-  }, [dbEdges]);
+  }, [dbEdges, setStoreEdges]);
+
+  const family = useMemo(() => buildFamilyIndex(dbEdges), [dbEdges]);
   const { nodes: visibleNodes, edges: visibleEdges } = useCollapseTree(nodes, edges);
 
-  const finalNodes = useMemo(() =>
-  visibleNodes.map(n =>
-    n.type === 'collapsedBubble'
-      ? { ...n, data: { ...n.data, onExpand: handleExpand } }
-      : n
-  ),
-  [visibleNodes, handleExpand]
-);
+  const finalNodes = useMemo(
+    () =>
+      visibleNodes.map((n) =>
+        n.type === 'collapsedBubble'
+          ? { ...n, data: { ...n.data, onExpand: handleToggleCollapse } }
+          : n
+      ),
+    [visibleNodes, handleToggleCollapse]
+  );
+
   // ─── Handlers ReactFlow ────────────────────────────────────────────────────
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -161,12 +209,55 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
     []
   );
 
-  // ─── Sauvegarder position après drag ──────────────────────────────────────
-  const onNodeDragStop = useCallback(
-    (_: React.MouseEvent, node: Node) => {
-      updateMember(node.id, { position: node.position } as any);
+  // ─── Déplacement : une seule écriture groupée au relâchement ──────────────
+  const dragStart = useRef(new Map<string, { x: number; y: number }>());
+
+  const onNodeDragStart = useCallback(
+    (_: React.MouseEvent, _node: Node, dragged: Node[]) => {
+      dragStart.current = new Map(dragged.map((n) => [n.id, { ...n.position }]));
     },
-    [updateMember]
+    []
+  );
+
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, _node: Node, dragged: Node[]) => {
+      if (!canEdit) return;
+      const { collapsedIds } = useTreeStore.getState();
+      const moved: Record<string, { x: number; y: number }> = {};
+      const followers: Record<string, { x: number; y: number }> = {};
+      const draggedIds = new Set(dragged.map((n) => n.id));
+
+      for (const node of dragged) {
+        if (node.type !== 'familyNode') continue;
+        const start = dragStart.current.get(node.id);
+        const dx = start ? node.position.x - start.x : 0;
+        const dy = start ? node.position.y - start.y : 0;
+        if (start && dx === 0 && dy === 0) continue; // simple clic : rien à enregistrer
+        moved[node.id] = { x: node.position.x, y: node.position.y };
+
+        // Parent replié : sa descendance masquée se déplace avec lui
+        if (start && collapsedIds.has(node.id)) {
+          for (const id of family.getDescendants(node.id)) {
+            if (draggedIds.has(id) || followers[id]) continue;
+            const current = nodesRef.current.find((n) => n.id === id);
+            if (current) {
+              followers[id] = { x: current.position.x + dx, y: current.position.y + dy };
+            }
+          }
+        }
+      }
+
+      if (Object.keys(followers).length > 0) {
+        setNodes((nds) =>
+          nds.map((n) => (followers[n.id] ? { ...n, position: followers[n.id] } : n))
+        );
+      }
+
+      saveMemberPositions({ ...followers, ...moved }).catch((error) => {
+        console.error('Erreur lors de la sauvegarde des positions :', error);
+      });
+    },
+    [canEdit, family, saveMemberPositions]
   );
 
   // ─── Ajouter un membre ─────────────────────────────────────────────────────
@@ -196,7 +287,7 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
           gender, 
           photoURL: photo || null,
           position 
-        } as any);
+        });
 
       // 2. Créer l'edge dans Firestore si parent existe
       if (parentId && parentId !== 'root') {
@@ -213,12 +304,6 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
   );
 
   
-
-  // ─── Ajouter épouse ────────────────────────────────────────────────────────
-  const handleAddSpouse = useCallback(
-    (id: string) => openModal(id, true),
-    [openModal]
-  );
 
   if (loading || !treeDoc) {
     return (
@@ -252,12 +337,13 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
         )}
 
         <ReactFlow
-          nodes={visibleNodes}
+          nodes={finalNodes}
           edges={visibleEdges}
            edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeDragStart={onNodeDragStart}
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           snapToGrid
@@ -271,7 +357,9 @@ export default function TreePage({ params }: { params: Promise<{ treeId: string 
             includeHiddenNodes: false,
           }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#998c70ff" />
+          <TreeBackground />
+          <BackgroundPicker />
+          <TreeLegend />
           <Controls showFitView={true} /> 
         </ReactFlow>
       </div>

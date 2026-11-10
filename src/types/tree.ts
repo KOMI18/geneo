@@ -8,6 +8,7 @@ export interface TreeMember {
   gender: Gender;
   photoURL?: string | null;
   note?:string 
+  position?: { x: number; y: number };
   createdAt?: number;
 }
 
